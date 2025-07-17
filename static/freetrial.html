@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Your AI Chatbot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-900 flex items-center justify-center h-screen text-white">
+    <div class="text-center p-8">
+        <h1 class="text-5xl font-bold mb-4">สร้าง AI Chatbot สำหรับธุรกิจของคุณ</h1>
+        <p class="text-xl text-gray-400 mb-8">เปลี่ยนผู้เยี่ยมชมให้เป็นลูกค้าด้วยผู้ช่วย AI อัจฉริยะ</p>
+        <button id="start-setup-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-full text-lg transition-transform transform hover:scale-105 shadow-lg">
+            <span id="btn-text">เริ่มสร้างแชทบอทของคุณฟรี!</span>
+            <span id="btn-spinner" class="hidden w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></span>
+        </button>
+    </div>
+
+    <script>
+        const startBtn = document.getElementById('start-setup-btn');
+        const btnText = document.getElementById('btn-text');
+        const btnSpinner = document.getElementById('btn-spinner');
+
+        startBtn.addEventListener('click', async () => {
+            // Show loading state
+            btnText.classList.add('hidden');
+            btnSpinner.classList.remove('hidden');
+            startBtn.disabled = true;
+
+            try {
+                // Call the backend to create a new tenant
+                const response = await fetch('/create_tenant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Could not create a new setup session.');
+                }
+
+                const data = await response.json();
+                const newTenantId = data.tenant_id;
+
+                // *** ส่วนที่แก้ไข: เปลี่ยนเส้นทางไปยัง /setup ที่ถูกต้อง ***
+                window.location.href = `/setup?tenant_id=${newTenantId}`;
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('เกิดข้อผิดพลาดในการเริ่มต้น กรุณาลองใหม่อีกครั้ง');
+                // Reset button state
+                btnText.classList.remove('hidden');
+                btnSpinner.classList.add('hidden');
+                startBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

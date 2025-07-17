@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Chatbot SaaS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="w-full max-w-md bg-white rounded-lg shadow-md p-8">
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">SaaS Chatbot Login</h2>
+        <form id="login-form">
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="email">Email</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" id="email" type="email" required>
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="password">Password</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3" id="password" type="password" required>
+            </div>
+            <div class="flex items-center justify-between">
+                <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" type="submit">
+                    Sign In
+                </button>
+                <button id="register-button" class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800" type="button">
+                    Register
+                </button>
+            </div>
+            <p id="error-message" class="text-red-500 text-center mt-4"></p>
+        </form>
+    </div>
+
+    <script>
+        const firebaseConfig = { /* ใส่ firebaseConfig ของคุณที่นี่ */ };
+        firebase.initializeApp(firebaseConfig);
+
+        const loginForm = document.getElementById('login-form');
+        const registerButton = document.getElementById('register-button');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const errorMessage = document.getElementById('error-message');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMessage.textContent = '';
+            try {
+                // 1. เรียก API ของเราเพื่อขอ Custom Token
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email: emailInput.value, password: passwordInput.value })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Login failed');
+                }
+                const data = await response.json();
+                
+                // 2. ใช้ Custom Token ที่ได้มา Login กับ Firebase
+                await firebase.auth().signInWithCustomToken(data.custom_token);
+                
+                // 3. ไปยังหน้า Dashboard (ใช้ tenant_id เดียวกับ user_id)
+                window.location.href = `/dashboard?tenant_id=${data.uid}`;
+
+            } catch (error) {
+                errorMessage.textContent = error.message;
+            }
+        });
+
+        registerButton.addEventListener('click', async () => {
+             // Logic การสมัครสมาชิก
+        });
+    </script>
+</body>
+</html>

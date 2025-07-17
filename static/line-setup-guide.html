@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINE Setup Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .prose h3 { margin-top: 1.5em; margin-bottom: 0.5em; font-size: 1.25em; font-weight: 600; }
+        .prose p { margin-bottom: 1em; }
+        .prose code { background-color: #e5e7eb; padding: 0.2em 0.4em; border-radius: 0.25rem; font-family: monospace; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <header class="bg-white shadow-sm">
+        <div class="max-w-4xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+            <a href="#" id="back-to-dashboard" class="text-sm text-blue-600 hover:underline">&larr; กลับไปหน้าหลัก</a>
+            <h1 class="text-2xl font-bold text-gray-900 mt-1">คู่มือการเชื่อมต่อกับ LINE</h1>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="bg-white p-8 rounded-lg shadow prose">
+            <h3>ภาพรวมการตั้งค่า</h3>
+            <p>การเชื่อมต่อบอทของคุณกับ LINE Official Account จำเป็นต้องตั้งค่า 2 ส่วนหลักๆ คือการนำ "กุญแจ" จาก LINE มาให้เรา และการนำ "ที่อยู่" ของเราไปบอก LINE</p>
+
+            <h3>วิดีโอสอนการตั้งค่า (ตัวอย่าง)</h3>
+            <div class="aspect-w-16 aspect-h-9">
+                <!-- นี่คือวิดีโอตัวอย่าง คุณสามารถเปลี่ยนเป็นวิดีโอของคุณเองได้ -->
+                <iframe src="https://www.youtube.com/embed/vbJ_3yy2s1c" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+
+            <h3>ขั้นตอนที่ 1: การหา Channel Access Token</h3>
+            <p>Channel Access Token คือ "กุญแจ" ที่อนุญาตให้บอทของเราส่งข้อความหาลูกค้าในนามของคุณได้</p>
+            <ol class="list-decimal list-inside">
+                <li>ไปที่ <a href="https://developers.line.biz/" target="_blank" class="text-blue-600">LINE Developers Console</a> และล็อกอิน</li>
+                <li>เลือก Provider และ Channel ของคุณ</li>
+                <li>ไปที่แท็บ <strong>"Messaging API"</strong></li>
+                <li>เลื่อนลงมาด้านล่างสุดจะเจอส่วน "Channel access token" ให้กดปุ่ม <strong>"Issue"</strong></li>
+                <li>คัดลอก Token ที่ได้ แล้วนำไปวางในช่อง <code>LINE Channel Access Token</code> ใน <a href="#" id="link-to-settings" class="text-blue-600">หน้าตั้งค่าบอท</a></li>
+            </ol>
+
+            <h3>ขั้นตอนที่ 2: การตั้งค่า Webhook URL</h3>
+            <p>Webhook URL คือ "ที่อยู่" ของบอทเรา ที่เราต้องนำไปบอก LINE ว่าถ้ามีคนส่งข้อความมา ให้ส่งมาที่นี่</p>
+             <ol class="list-decimal list-inside">
+                <li>ในหน้า "Messaging API" เดียวกัน ให้มองหาส่วน "Webhook settings"</li>
+                <li>คัดลอก Webhook URL จาก <a href="#" id="link-to-settings-2" class="text-blue-600">หน้าตั้งค่าบอท</a> ของคุณ</li>
+                <li>นำ URL ที่คัดลอกมาไปวางในช่อง <strong>"Webhook URL"</strong></li>
+                <li>กดปุ่ม <strong>"Verify"</strong> เพื่อทดสอบการเชื่อมต่อ</li>
+                <li>เปิดใช้งาน <strong>"Use webhook"</strong></li>
+            </ol>
+            <p>เพียงเท่านี้ บอทของคุณก็พร้อมที่จะทำงานบน LINE แล้วครับ!</p>
+        </div>
+    </main>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const TENANT_ID = urlParams.get('tenant_id');
+            if(TENANT_ID) {
+                document.getElementById('back-to-dashboard').href = `/dashboard?tenant_id=${TENANT_ID}`;
+                document.getElementById('link-to-settings').href = `/settings?tenant_id=${TENANT_ID}`;
+                document.getElementById('link-to-settings-2').href = `/settings?tenant_id=${TENANT_ID}`;
+            }
+        });
+    </script>
+</body>
+</html>

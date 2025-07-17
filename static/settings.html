@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .form-textarea { min-height: 200px; }
+        /* Chat Assistant Styles */
+        #assistant-bubble { position: fixed; bottom: 20px; right: 20px; z-index: 9998; }
+        #assistant-container { position: fixed; bottom: 90px; right: 20px; width: 375px; height: 500px; z-index: 9999; transition: opacity 0.3s, transform 0.3s; transform: translateY(20px); opacity: 0; pointer-events: none; }
+        #assistant-container.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
+        #assistant-chat-log::-webkit-scrollbar { width: 4px; }
+        #assistant-chat-log::-webkit-scrollbar-thumb { background-color: #9ca3af; border-radius: 20px; }
+        /* Toggle Switch Styles */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #4f46e5; /* indigo-600 */
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4f46e5; /* indigo-600 */
+        }
+
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <div>
+                <a href="#" id="back-to-dashboard" class="text-sm text-blue-600 hover:underline">&larr; กลับไปหน้าหลัก</a>
+                <h1 class="text-2xl font-bold text-gray-900 mt-1">ตั้งค่าสมองบอทและการเชื่อมต่อ</h1>
+            </div>
+            <div id="tenant-id-display" class="text-sm text-gray-500"></div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="bg-white p-8 rounded-lg shadow">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">การตั้งค่าทั่วไปของ Chatbot</h2>
+            <form id="settings-form" class="space-y-6">
+                <!-- NEW: Business Type Selection -->
+                <div id="business-type-selection-section">
+                    <label for="businessType" class="block text-gray-700 text-sm font-semibold mb-2">ประเภทธุรกิจของคุณ:</label>
+                    <select id="businessType" name="businessType" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-200">
+                        <option value="">-- กรุณาเลือก --</option>
+                        <option value="physical_products_single">ขายสินค้า (ตัวเดียว/ไม่กี่ชนิด)</option>
+                        <option value="physical_products_multi">ขายสินค้า (หลากหลายประเภท)</option>
+                        <option value="service_appointment">ขายบริการ (นัดหมาย/จองคิว)</option>
+                        <option value="service_project">ขายบริการ (โปรเจกต์/กำหนดเอง)</option>
+                        <option value="other_specialized">ธุรกิจเฉพาะทางอื่นๆ</option>
+                    </select>
+                    <p class="text-sm text-gray-500 mt-2">การเลือกประเภทธุรกิจจะช่วยปรับแต่งการตั้งค่า Chatbot ให้เหมาะสมกับคุณ</p>
+                </div>
+
+                <!-- Bot Persona -->
+                <div>
+                    <label for="botPersona" class="block text-gray-700 text-sm font-semibold mb-2">บทบาทและตัวตนของบอท (Bot Persona):</label>
+                    <textarea id="botPersona" name="botPersona" class="form-textarea w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-200" placeholder="เช่น คุณคือผู้ช่วยขายสินค้าที่สุภาพและเป็นมิตร"></textarea>
+                    <p class="text-sm text-gray-500 mt-2">กำหนดลักษณะการพูดและบุคลิกของบอทของคุณ</p>
+                </div>
+
+                <!-- Knowledge Base -->
+                <div>
+                    <label for="knowledgeBase" class="block text-gray-700 text-sm font-semibold mb-2">ฐานความรู้ (Knowledge Base):</label>
+                    <textarea id="knowledgeBase" name="knowledgeBase" class="form-textarea w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-200" placeholder="เช่น ข้อมูลสินค้า, โปรโมชั่น, คำถามที่พบบ่อย (คั่นด้วย ### สำหรับแต่ละหัวข้อ)"></textarea>
+                    <p class="text-sm text-gray-500 mt-2">ใส่ข้อมูลที่ต้องการให้บอทเรียนรู้ เช่น รายละเอียดสินค้า, บริการ, โปรโมชั่น</p>
+                </div>
+
+                <!-- Chatbot Name -->
+                <div>
+                    <label for="chatbotName" class="block text-gray-700 text-sm font-semibold mb-2">ชื่อ Chatbot:</label>
+                    <input type="text" id="chatbotName" name="chatbotName" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-200" placeholder="เช่น บอทผู้ช่วยร้านค้า">
+                </div>
+
+                <!-- Welcome Message -->
+                <div>
+                    <label for="welcomeMessage" class="block text-gray-700 text-sm font-semibold mb-2">ข้อความทักทายแรก:</label>
+                    <textarea id="welcomeMessage" name="welcomeMessage" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-200" rows="3" placeholder="เช่น สวัสดีครับ มีอะไรให้ช่วยไหมครับ?"></textarea>
+                </div>
+
+                <hr class="my-8">
+
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">การตั้งค่าเฉพาะประเภทธุรกิจ</h2>
+                <!-- NEW: Dynamic Business-Specific Settings -->
+                <div id="business-specific-settings">
+                    <!-- Content will be loaded here by JavaScript -->
+                    <p class="text-gray-600">กรุณาเลือกประเภทธุรกิจด้านบนเพื่อดูการตั้งค่าเพิ่มเติม</p>
+                </div>
+
+                <hr class="my-8">
+
+                <!-- ✨ NEW: Behavioral & Tonal Settings Section ✨ -->
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">การตั้งค่าเชิงพฤติกรรมและน้ำเสียง</h2>
+                <div class="space-y-6">
+                    <!-- 1. Response Length -->
+                    <div class="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                            <p class="font-semibold text-gray-800">ความยาวของคำตอบ</p>
+                            <p class="text-sm text-gray-500">เปิดเพื่อตอบแบบละเอียด, ปิดเพื่อตอบสั้นกระชับ</p>
+                        </div>
+                        <div class="relative inline-block w-14 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="is_detailed_response" id="toggle-detailed" class="toggle-checkbox absolute block w-7 h-7 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                            <label for="toggle-detailed" class="toggle-label block overflow-hidden h-7 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                    </div>
+
+                    <!-- 2. Tone of Voice -->
+                    <div class="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                            <p class="font-semibold text-gray-800">ลักษณะน้ำเสียง</p>
+                            <p class="text-sm text-gray-500">เปิดสำหรับ "ปากหวาน/ชื่นชม", ปิดสำหรับ "มีมุก/เท่ห์"</p>
+                        </div>
+                        <div class="relative inline-block w-14 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="is_sweet_tone" id="toggle-tone" class="toggle-checkbox absolute block w-7 h-7 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                            <label for="toggle-tone" class="toggle-label block overflow-hidden h-7 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                    </div>
+
+                    <!-- 3. Empathy -->
+                    <div class="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                            <p class="font-semibold text-gray-800">ความใส่ใจลูกค้า</p>
+                            <p class="text-sm text-gray-500">เปิดเพื่อให้บอทถามไถ่ด้วยความเป็นห่วง</p>
+                        </div>
+                        <div class="relative inline-block w-14 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="show_empathy" id="toggle-empathy" class="toggle-checkbox absolute block w-7 h-7 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                            <label for="toggle-empathy" class="toggle-label block overflow-hidden h-7 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                    </div>
+
+                    <!-- 4. Sales Drive -->
+                    <div class="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                            <p class="font-semibold text-gray-800">ระดับการพยายามปิดการขาย</p>
+                            <p class="text-sm text-gray-500">เปิดสำหรับ "พยายามปิดการขายสูง", ปิดสำหรับ "ให้ข้อมูล/ไม่กดดัน"</p>
+                        </div>
+                        <div class="relative inline-block w-14 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="high_sales_drive" id="toggle-sales" class="toggle-checkbox absolute block w-7 h-7 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                            <label for="toggle-sales" class="toggle-label block overflow-hidden h-7 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-8">
+
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">การเชื่อมต่อช่องทาง</h2>
+                <!-- LINE Access Token -->
+                <div>
+                    <label for="lineAccessToken" class="block text-gray-700 text-sm font-semibold mb-2">LINE Channel Access Token:</label>
+                    <input type="text" id="lineAccessToken" name="lineAccessToken" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-200" placeholder="ใส่ LINE Channel Access Token ของคุณ">
+                    <p class="text-sm text-gray-500 mt-2">ใช้สำหรับเชื่อมต่อกับ LINE Official Account (<a href="#" id="link-to-line-guide-settings" class="text-blue-600 hover:underline">ดูคู่มือ</a>)</p>
+                    <p class="text-sm text-gray-500 mt-2">Webhook URL สำหรับ LINE: <code id="line-webhook-url" class="bg-gray-200 p-1 rounded-md"></code> <button class="ml-2 text-blue-600 hover:underline" onclick="copyToClipboard('line-webhook-url')">คัดลอก</button></p>
+                </div>
+
+                <!-- Facebook Page Token -->
+                <div>
+                    <label for="facebookPageToken" class="block text-gray-700 text-sm font-semibold mb-2">Facebook Page Access Token:</label>
+                    <input type="text" id="facebookPageToken" name="facebookPageToken" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-200" placeholder="ใส่ Facebook Page Access Token ของคุณ">
+                    <p class="text-sm text-gray-500 mt-2">ใช้สำหรับเชื่อมต่อกับ Facebook Page (<a href="#" id="link-to-facebook-guide-settings" class="text-blue-600 hover:underline">ดูคู่มือ</a>)</p>
+                </div>
+
+                <!-- Facebook Verify Token -->
+                <div>
+                    <label for="facebookVerifyToken" class="block text-gray-700 text-sm font-semibold mb-2">Facebook Verify Token:</label>
+                    <input type="text" id="facebookVerifyToken" name="facebookVerifyToken" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-200" placeholder="ใส่ Facebook Verify Token ที่คุณตั้งเอง">
+                    <p class="text-sm text-gray-500 mt-2">ใช้สำหรับยืนยันการเชื่อมต่อ Webhook กับ Facebook</p>
+                    <p class="text-sm text-gray-500 mt-2">Webhook URL สำหรับ Facebook: <code id="facebook-webhook-url" class="bg-gray-200 p-1 rounded-md"></code> <button class="ml-2 text-blue-600 hover:underline" onclick="copyToClipboard('facebook-webhook-url')">คัดลอก</button></p>
+                </div>
+
+                <!-- Save Button -->
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
+                    บันทึกการตั้งค่า
+                </button>
+            </form>
+        </div>
+    </main>
+    
+    <!-- *** NEW: Settings Assistant Chat Bubble *** -->
+    <button id="assistant-bubble" class="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-purple-700 transition-transform transform hover:scale-110">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+    </button>
+
+    <!-- *** NEW: Settings Assistant Chat Container *** -->
+    <div id="assistant-container" class="bg-white rounded-2xl shadow-2xl flex flex-col">
+        <div class="p-4 bg-purple-600 text-white flex items-center shadow-md rounded-t-2xl">
+            <h1 class="text-lg font-bold">ผู้ช่วยจัดการ</h1>
+        </div>
+        <div id="assistant-chat-log" class="flex-1 overflow-y-auto p-4 space-y-4">
+            <!-- Assistant messages will appear here -->
+        </div>
+        <form id="assistant-form" class="p-4 border-t flex items-center bg-white rounded-b-2xl">
+            <input type="text" id="assistant-input" placeholder="บอกให้เราช่วย..." class="flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <button type="submit" class="ml-3 bg-purple-600 text-white rounded-full p-2 hover:bg-purple-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+        </form>
+    </div>
+
+    <div id="toast-notification" class="hidden fixed bottom-5 right-5 bg-green-500 text-white py-3 px-6 rounded-lg shadow-lg">บันทึกข้อมูลสำเร็จ!</div>
+
+    <script type="module">
+        // Import firebaseConfig from the external file using its absolute path
+        import { firebaseConfig } from '/static/firebase-config.js'; 
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        let app, db, auth;
+        let TENANT_ID; // Declare TENANT_ID globally for this script
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            TENANT_ID = urlParams.get('tenant_id'); // Assign to global TENANT_ID
+
+            if (!TENANT_ID) {
+                document.body.innerHTML = '<div class="w-full h-full flex items-center justify-center"><h1>Error: Tenant ID not found in URL. Please go back to the landing page.</h1></div>';
+                return;
+            }
+
+            // --- Firebase Initialization ---
+            if (firebaseConfig && firebaseConfig.apiKey && firebaseConfig.projectId) {
+                try {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    console.log("Firebase initialized successfully in settings page.");
+                } catch (error) {
+                    console.error("Firebase initialization failed:", error);
+                    // Display error message if Firebase init fails
+                    document.getElementById('toast-notification').textContent = 'เกิดข้อผิดพลาดในการเริ่มต้น Firebase: ' + error.message;
+                    document.getElementById('toast-notification').classList.remove('hidden', 'bg-green-500');
+                    document.getElementById('toast-notification').classList.add('bg-red-500');
+                    setTimeout(() => { document.getElementById('toast-notification').classList.add('hidden'); }, 5000);
+                    return;
+                }
+            } else {
+                console.error("Firebase config is missing or invalid. Settings page may not function correctly.");
+                document.getElementById('toast-notification').textContent = 'เกิดข้อผิดพลาด: ไม่พบการตั้งค่า Firebase หรือไม่ถูกต้อง';
+                document.getElementById('toast-notification').classList.remove('hidden', 'bg-green-500');
+                document.getElementById('toast-notification').classList.add('bg-red-500');
+                setTimeout(() => { document.getElementById('toast-notification').classList.add('hidden'); }, 5000);
+                return;
+            }
+
+            // --- Main Settings Form Logic ---
+            const backToDashboardLink = document.getElementById('back-to-dashboard');
+            backToDashboardLink.href = `/dashboard?tenant_id=${TENANT_ID}`;
+
+            document.getElementById('tenant-id-display').textContent = `รหัสผู้ใช้งาน: ${TENANT_ID}`;
+            document.getElementById('line-webhook-url').textContent = `${window.location.origin}/webhook/line/${TENANT_ID}`;
+            document.getElementById('facebook-webhook-url').textContent = `${window.location.origin}/webhook/facebook/${TENANT_ID}`;
+
+            document.getElementById('link-to-line-guide-settings').href = `/line-setup-guide?tenant_id=${TENANT_ID}`;
+            document.getElementById('link-to-facebook-guide-settings').href = `/facebook-setup-guide?tenant_id=${TENANT_ID}`;
+
+            const settingsForm = document.getElementById('settings-form');
+            const businessTypeSelect = document.getElementById('businessType');
+            const businessSpecificSettingsDiv = document.getElementById('business-specific-settings');
+            const toastNotification = document.getElementById('toast-notification');
+
+            // Function to show toast notification
+            function showToast(message, type = 'success') {
+                toastNotification.textContent = message;
+                toastNotification.className = `fixed bottom-5 right-5 py-3 px-6 rounded-lg shadow-lg ${type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`;
+                toastNotification.classList.remove('hidden');
+                setTimeout(() => {
+                    toastNotification.classList.add('hidden');
+                }, 3000);
+            }
+
+            // Function to dynamically render business-specific settings
+            function renderBusinessSpecificSettings(type, currentSettings = {}) {
+                let contentHtml = '';
+                switch (type) {
+                    case 'physical_products_single':
+                    case 'physical_products_multi':
+                        contentHtml = `
+                            <div class="bg-blue-50 p-6 rounded-lg shadow-inner">
+                                <h3 class="text-xl font-semibold text-blue-800 mb-3">การตั้งค่าสำหรับสินค้า</h3>
+                                <div class="mb-4">
+                                    <label for="productDataUpload" class="block text-gray-700 text-sm font-semibold mb-2">อัปโหลดข้อมูลสินค้า (CSV/Excel):</label>
+                                    <input type="file" id="productDataUpload" accept=".csv, .xls, .xlsx" class="w-full text-gray-700 border border-gray-300 rounded-md p-2">
+                                    <p class="text-sm text-gray-500 mt-1">อัปโหลดไฟล์ที่มีข้อมูลสินค้า เช่น ชื่อ, ราคา, รายละเอียด, สต็อก เพื่อให้บอทเรียนรู้</p>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="inline-flex items-center">
+                                        <input type="checkbox" id="productRecommendationEnabled" name="productRecommendationEnabled" class="form-checkbox h-5 w-5 text-blue-600 rounded" ${currentSettings.productRecommendationEnabled ? 'checked' : ''}>
+                                        <span class="ml-2 text-gray-700">เปิดใช้งานการแนะนำสินค้าอัตโนมัติ</span>
+                                    </label>
+                                    <p class="text-sm text-gray-500 mt-1">Chatbot จะสามารถแนะนำสินค้าที่เกี่ยวข้องหรือสินค้าใหม่ได้</p>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'service_appointment':
+                        contentHtml = `
+                            <div class="bg-green-50 p-6 rounded-lg shadow-inner">
+                                <h3 class="text-xl font-semibold text-green-800 mb-3">การตั้งค่าสำหรับบริการและการจอง</h3>
+                                <div class="mb-4">
+                                    <label for="serviceDataUpload" class="block text-gray-700 text-sm font-semibold mb-2">อัปโหลดข้อมูลบริการ (CSV/Excel):</label>
+                                    <input type="file" id="serviceDataUpload" accept=".csv, .xls, .xlsx" class="w-full text-gray-700 border border-gray-300 rounded-md p-2">
+                                    <p class="text-sm text-gray-500 mt-1">อัปโหลดไฟล์ที่มีข้อมูลบริการ เช่น ชื่อบริการ, รายละเอียด, ราคา, ระยะเวลา เพื่อให้บอทเรียนรู้</p>
+                                </div>
+                                <div class="mb-4">
+                                    <label for="bookingSystemIntegration" class="block text-gray-700 text-sm font-semibold mb-2">เชื่อมต่อกับระบบจองภายนอก (API Key/URL):</label>
+                                    <input type="text" id="bookingSystemIntegration" name="bookingSystemIntegration" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500 transition duration-200" placeholder="API Key/URL ของระบบจอง" value="${currentSettings.bookingSystemIntegration || ''}">
+                                    <p class="text-sm text-gray-500 mt-1">ใส่ API Key หรือ URL สำหรับเชื่อมต่อ Chatbot กับระบบจองของคุณ</p>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="inline-flex items-center">
+                                        <input type="checkbox" id="botBookingEnabled" name="botBookingEnabled" class="form-checkbox h-5 w-5 text-green-600 rounded" ${currentSettings.botBookingEnabled ? 'checked' : ''}>
+                                        <span class="ml-2 text-gray-700">เปิดใช้งานการจองผ่าน Chatbot</span>
+                                    </label>
+                                    <p class="text-sm text-gray-500 mt-1">อนุญาตให้ลูกค้าจองคิวหรือนัดหมายผ่าน Chatbot ได้โดยตรง</p>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'service_project':
+                        contentHtml = `
+                            <div class="bg-purple-50 p-6 rounded-lg shadow-inner">
+                                <h3 class="text-xl font-semibold text-purple-800 mb-3">การตั้งค่าสำหรับโปรเจกต์และลูกค้า</h3>
+                                <div class="mb-4">
+                                    <label class="inline-flex items-center">
+                                        <input type="checkbox" id="projectStatusUpdateEnabled" name="projectStatusUpdateEnabled" class="form-checkbox h-5 w-5 text-purple-600 rounded" ${currentSettings.projectStatusUpdateEnabled ? 'checked' : ''}>
+                                        <span class="ml-2 text-gray-700">เปิดใช้งานการอัปเดตสถานะโปรเจกต์ผ่าน Chatbot</span>
+                                    </label>
+                                    <p class="text-sm text-gray-500 mt-1">Chatbot จะสามารถให้ข้อมูลสถานะโปรเจกต์แก่ลูกค้าได้</p>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'other_specialized':
+                        contentHtml = `
+                            <div class="bg-yellow-50 p-6 rounded-lg shadow-inner">
+                                <h3 class="text-xl font-semibold text-yellow-800 mb-3">ตั้งค่าเพิ่มเติมสำหรับ Chatbot</h3>
+                                <p class="text-gray-700">สำหรับธุรกิจเฉพาะทาง คุณสามารถใช้ฟีเจอร์พื้นฐานและเพิ่มข้อมูลที่ต้องการให้ Chatbot เรียนรู้ได้</p>
+                                <p class="text-sm text-gray-500 mt-2">คุณสามารถเพิ่ม/แก้ไข <a href="#" onclick="showToast('ฟังก์ชันจัดการ FAQ จะอยู่ที่นี่', 'info')" class="text-yellow-600 hover:underline">คำถามที่พบบ่อย</a> ด้วยตัวคุณเอง</p>
+                            </div>
+                        `;
+                        break;
+                    default:
+                        contentHtml = `
+                            <p class="text-gray-600">กรุณาเลือกประเภทธุรกิจด้านบนเพื่อดูการตั้งค่าเพิ่มเติม</p>
+                        `;
+                        break;
+                }
+                businessSpecificSettingsDiv.innerHTML = contentHtml;
+            }
+
+            // Fetch current tenant data and populate form
+            onAuthStateChanged(auth, async (user) => {
+                if (user && db) {
+                    try {
+                        const response = await fetch(`/api/tenant/${TENANT_ID}`);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        const data = await response.json();
+
+                        // Client-side ownership check
+                        if (data.owner_uid !== user.uid) {
+                            console.error("Access Denied: Current user is not the owner of this tenant.");
+                            showToast('ไม่ได้รับอนุญาต: คุณไม่มีสิทธิ์เข้าถึงการตั้งค่า Tenant นี้', 'error');
+                            setTimeout(() => { window.location.href = `/dashboard?tenant_id=${TENANT_ID}`; }, 3000); // Redirect to dashboard
+                            return;
+                        }
+
+                        document.getElementById('botPersona').value = data.botPersona || '';
+                        document.getElementById('knowledgeBase').value = data.knowledgeBase || '';
+                        document.getElementById('lineAccessToken').value = data.lineAccessToken || '';
+                        document.getElementById('facebookPageToken').value = data.facebookPageToken || '';
+                        document.getElementById('facebookVerifyToken').value = data.facebookVerifyToken || '';
+                        document.getElementById('chatbotName').value = data.chatbotName || '';
+                        document.getElementById('welcomeMessage').value = data.welcomeMessage || '';
+
+                        // ✨ NEW: Populate new toggle switches with data from Firestore
+                        document.getElementById('toggle-detailed').checked = data.is_detailed_response || false;
+                        document.getElementById('toggle-tone').checked = data.is_sweet_tone || false;
+                        document.getElementById('toggle-empathy').checked = data.show_empathy || false;
+                        document.getElementById('toggle-sales').checked = data.high_sales_drive || false;
+
+
+                        // Set business type and trigger dynamic rendering
+                        businessTypeSelect.value = data.businessType || '';
+                        renderBusinessSpecificSettings(data.businessType, data); // Pass all data to pre-fill dynamic fields
+                    } catch (err) {
+                        console.error("Error fetching tenant data:", err);
+                        showToast('ไม่สามารถโหลดข้อมูลการตั้งค่าได้: ' + err.message, 'error');
+                    }
+                } else {
+                    console.warn("User not authenticated for settings page.");
+                    showToast('โปรดเข้าสู่ระบบเพื่อเข้าถึงหน้านี้', 'error');
+                    setTimeout(() => { window.location.href = '/login'; }, 3000); // Redirect to login
+                }
+            });
+
+
+            // Event listener for business type selection change
+            businessTypeSelect.addEventListener('change', (e) => {
+                renderBusinessSpecificSettings(e.target.value, {}); // Render with empty settings initially
+            });
+
+            // Handle form submission
+            settingsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const formData = {
+                    botPersona: document.getElementById('botPersona').value,
+                    knowledgeBase: document.getElementById('knowledgeBase').value,
+                    lineAccessToken: document.getElementById('lineAccessToken').value,
+                    facebookPageToken: document.getElementById('facebookPageToken').value,
+                    facebookVerifyToken: document.getElementById('facebookVerifyToken').value,
+                    businessType: businessTypeSelect.value, // Save selected business type
+                    chatbotName: document.getElementById('chatbotName').value,
+                    welcomeMessage: document.getElementById('welcomeMessage').value,
+                    is_detailed_response: document.getElementById('toggle-detailed').checked,
+                    is_sweet_tone: document.getElementById('toggle-tone').checked,
+                    show_empathy: document.getElementById('toggle-empathy').checked,
+                    high_sales_drive: document.getElementById('toggle-sales').checked,
+                };
+
+                // Add business-specific fields based on selected type
+                const currentBusinessType = businessTypeSelect.value;
+                if (currentBusinessType.startsWith('physical_products')) {
+                    const productRecommendationEnabledElement = document.getElementById('productRecommendationEnabled');
+                    if (productRecommendationEnabledElement) {
+                        formData.productRecommendationEnabled = productRecommendationEnabledElement.checked;
+                    }
+                } else if (currentBusinessType === 'service_appointment') {
+                    const bookingSystemIntegrationElement = document.getElementById('bookingSystemIntegration');
+                    if (bookingSystemIntegrationElement) {
+                        formData.bookingSystemIntegration = bookingSystemIntegrationElement.value;
+                    }
+                    const botBookingEnabledElement = document.getElementById('botBookingEnabled');
+                    if (botBookingEnabledElement) {
+                        formData.botBookingEnabled = botBookingEnabledElement.checked;
+                    }
+                } else if (currentBusinessType === 'service_project') {
+                    const projectStatusUpdateEnabledElement = document.getElementById('projectStatusUpdateEnabled');
+                    if (projectStatusUpdateEnabledElement) {
+                        formData.projectStatusUpdateEnabled = projectStatusUpdateEnabledElement.checked;
+                    }
+                }
+                // File inputs (productDataUpload, serviceDataUpload) are handled separately via their own change listeners
+                // and would typically send files to a storage service, not directly in this form submission.
+                // For this example, they trigger a simple alert.
+
+                try {
+                    const response = await fetch(`/api/tenant/${TENANT_ID}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formData)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || 'Network response was not ok.');
+                    }
+                    showToast('บันทึกข้อมูลสำเร็จ!');
+                } catch (error) {
+                    console.error('Error saving settings:', error);
+                    showToast('บันทึกข้อมูลล้มเหลว: ' + error.message, 'error');
+                }
+            });
+
+            // --- Copy to Clipboard Function ---
+            window.copyToClipboard = function(elementId) {
+                const textToCopy = document.getElementById(elementId).textContent;
+                const tempInput = document.createElement('textarea');
+                tempInput.value = textToCopy;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+                showToast('คัดลอก URL แล้ว!');
+            };
+
+
+            // --- Assistant Chat Logic (remains the same) ---
+            const assistantBubble = document.getElementById('assistant-bubble');
+            const assistantContainer = document.getElementById('assistant-container');
+            const assistantForm = document.getElementById('assistant-form');
+            const assistantInput = document.getElementById('assistant-input');
+            const assistantChatLog = document.getElementById('assistant-chat-log');
+            let isAssistantOpen = false;
+
+            function addAssistantMessage(message, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `flex items-start gap-3 ${sender === 'user' ? 'justify-end' : ''}`;
+                const contentDiv = document.createElement('div');
+                contentDiv.className = `max-w-xs p-3 rounded-lg ${sender === 'user' ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-800'}`;
+                contentDiv.textContent = message;
+                messageDiv.appendChild(contentDiv);
+                assistantChatLog.scrollTop = assistantChatLog.scrollHeight;
+            }
+
+            assistantBubble.addEventListener('click', () => {
+                isAssistantOpen = !isAssistantOpen;
+                assistantContainer.classList.toggle('open', isAssistantOpen);
+                if (isAssistantOpen && assistantChatLog.children.length === 0) {
+                     addAssistantMessage('สวัสดีครับ มีอะไรให้ผมช่วยอัปเดตการตั้งค่าบอทของคุณไหมครับ เช่น แก้ไขบทบาท หรือเพิ่มข้อมูลความรู้ใหม่ๆ ครับ', 'bot');
+                }
+            });
+
+            assistantForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const message = assistantInput.value.trim();
+                if (!message) return;
+                addAssistantMessage(message, 'user');
+                assistantInput.value = '';
+
+                try {
+                    const response = await fetch(`/api/settings_assistant/${TENANT_ID}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: message })
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || 'Network response was not ok.');
+                    }
+                    const data = await response.json();
+                    addAssistantMessage(data.reply, 'bot');
+                    // Optional: Add a suggestion to refresh
+                    if (data.reply.includes("เรียบร้อยแล้ว")) {
+                         addAssistantMessage('คุณอาจจะต้องรีเฟรชหน้านี้เพื่อดูการเปลี่ยนแปลงในฟอร์มนะครับ', 'bot');
+                    }
+                } catch (error) {
+                    console.error('Assistant Error:', error);
+                    addAssistantMessage('ขออภัยค่ะ เกิดข้อผิดพลาดบางอย่าง', 'bot');
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>

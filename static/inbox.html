@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversation Inbox</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chat-container::-webkit-scrollbar { width: 4px; }
+        .chat-container::-webkit-scrollbar-thumb { background-color: #9ca3af; border-radius: 20px; }
+        .user-list-item.selected { background-color: #e0f2fe; }
+        /* --- ✨ เพิ่ม CSS ใหม่สำหรับ Toggle Switch --- */
+        .toggle-checkbox:checked { right: 0; border-color: #16a34a; /* green-600 */ }
+        .toggle-checkbox:checked + .toggle-label { background-color: #16a34a; /* green-600 */ }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+            <a href="#" id="back-to-dashboard" class="text-sm text-blue-600 hover:underline">&larr; กลับไปหน้าหลัก</a>
+            <h1 class="text-2xl font-bold text-gray-900 mt-1">กล่องข้อความ (Inbox)</h1>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="flex h-[75vh] bg-white rounded-lg shadow-lg overflow-hidden">
+            <!-- User List Panel -->
+            <div id="user-list-panel" class="w-full md:w-1/3 border-r border-gray-200 flex flex-col">
+                <div class="p-4 border-b">
+                    <h3 class="font-semibold text-gray-800">บทสนทนาทั้งหมด</h3>
+                </div>
+                <div id="user-list-container" class="overflow-y-auto flex-1">
+                    <p class="p-4 text-gray-500" id="user-list-loading">กำลังตรวจสอบสิทธิ์การเข้าถึง...</p>
+                </div>
+            </div>
+
+            <!-- Chat Panel -->
+            <div id="chat-panel" class="w-full md:w-2/3 flex-col hidden">
+                <!-- Chat Header -->
+                <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                    <div class="flex items-center gap-3">
+                        <img id="chat-header-avatar" src="" alt="User Avatar" class="w-10 h-10 rounded-full object-cover">
+                        <div>
+                            <h3 id="chat-header-user-name" class="font-semibold text-gray-800"></h3>
+                            <p id="chat-header-user-id" class="text-xs text-gray-500"></p>
+                        </div>
+                    </div>
+                    <div id="lead-score-display" class="text-sm font-medium text-indigo-600 bg-indigo-100 px-3 py-1 rounded-full"></div>
+                    <div class="flex items-center">
+                        <span id="bot-status-text" class="text-sm mr-2 font-medium text-gray-600">Bot: OFF</span>
+                         <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="toggle-bot" id="toggle-bot-checkbox" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                            <label for="toggle-bot-checkbox" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat History -->
+                <div id="chat-history-container" class="flex-1 overflow-y-auto p-6 space-y-4 chat-container">
+                    <!-- Messages will be loaded here -->
+                </div>
+
+                <!-- Reply Form -->
+                <div class="p-4 border-t bg-gray-50">
+                    <form id="admin-reply-form" class="flex items-center gap-4">
+                        <input type="text" id="admin-message-input" placeholder="พิมพ์ข้อความในฐานะแอดมิน..." class="flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="off" required>
+                        <button type="submit" class="bg-blue-600 text-white rounded-full px-5 py-2 hover:bg-blue-700 font-semibold">ส่ง</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Placeholder Panel -->
+            <div id="placeholder-panel" class="w-full md:w-2/3 flex items-center justify-center h-full text-gray-500">
+                <div class="text-center">
+                    <i class="fas fa-comments text-5xl text-gray-300 mb-4"></i>
+                    <p>กรุณาเลือกบทสนทนาจากด้านซ้าย</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        // --- ✨ 1. เพิ่มการ Import ที่จำเป็นทั้งหมด ---
+        import { firebaseConfig } from '/static/firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        // import { getFirestore, doc, onSnapshot, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, doc, onSnapshot, updateDoc, arrayUnion, 
+            collection, query, orderBy 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- DOM Elements (เพิ่ม toggle switch) ---
+        const botStatusText = document.getElementById('bot-status-text');
+        const botToggleCheckbox = document.getElementById('toggle-bot-checkbox');
+
+        // --- DOM Elements ---
+        const userListContainer = document.getElementById('user-list-container');
+        const userListLoading = document.getElementById('user-list-loading');
+        const chatPanel = document.getElementById('chat-panel');
+        const placeholderPanel = document.getElementById('placeholder-panel');
+        const chatHeaderAvatar = document.getElementById('chat-header-avatar');
+        const chatHeaderUserName = document.getElementById('chat-header-user-name');
+        const chatHeaderUserId = document.getElementById('chat-header-user-id');
+        const leadScoreDisplay = document.getElementById('lead-score-display');
+        const chatHistoryContainer = document.getElementById('chat-history-container');
+        const adminReplyForm = document.getElementById('admin-reply-form');
+        const adminMessageInput = document.getElementById('admin-message-input');
+        const backToDashboardLink = document.getElementById('back-to-dashboard');
+
+
+        // --- State Variables ---
+        let db, auth; // ✨ เพิ่ม auth เข้ามา
+        let currentUserId = null;
+        let unsubscribeFromChat = null;
+        let usersData = {};
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const TENANT_ID = urlParams.get('tenant_id');
+
+            if (!TENANT_ID) {
+                document.body.innerHTML = '<h1>Error: ไม่พบ Tenant ID ใน URL</h1>';
+                return;
+            }
+
+            backToDashboardLink.href = `/dashboard?tenant_id=${TENANT_ID}`;
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app); // ✨ 2. Initialize Auth
+
+                // ✨ 3. หัวใจของการแก้ไข: รอให้ Firebase ยืนยันตัวตนก่อนเริ่มทำงาน
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        // ถ้ามีผู้ใช้ล็อกอินอยู่ ให้เริ่มโหลดรายชื่อได้เลย
+                        console.log("Authentication successful. User UID:", user.uid);
+                        loadUserList(TENANT_ID);
+                    } else {
+                        // ถ้าไม่มีผู้ใช้ล็อกอิน ให้แสดงข้อความและอาจจะส่งไปหน้า login
+                        console.error("Authentication failed. User is not signed in.");
+                        userListLoading.textContent = 'การยืนยันตัวตนล้มเหลว โปรดกลับไปหน้าหลักและเข้าสู่ระบบใหม่อีกครั้ง';
+                        userListLoading.classList.add('text-red-500');
+                        // window.location.href = `/login?redirect=/inbox?tenant_id=${TENANT_ID}`;
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                userListContainer.innerHTML = `<p class="p-4 text-red-500">เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}</p>`;
+            }
+        });
+
+        // --- ✨ เพิ่มฟังก์ชันสำหรับอัปเดต UI ของ Toggle Switch ---
+        function updateBotToggleUI(isActive) {
+            botToggleCheckbox.checked = isActive;
+            botStatusText.textContent = isActive ? 'Bot: ON' : 'Bot: OFF';
+            botStatusText.className = `text-sm mr-2 font-medium ${isActive ? 'text-green-600' : 'text-gray-600'}`;
+        }
+
+        // --- Main Functions (โค้ดส่วนนี้เหมือนเดิม แต่จะทำงานได้ถูกต้องแล้ว) ---
+        async function loadUserList(tenantId) {
+            userListLoading.textContent = 'กำลังโหลดรายชื่อผู้ใช้...';
+            const usersCollectionRef = collection(db, 'chat_sessions', tenantId, 'users');
+
+            // ใช้ onSnapshot เพื่อฟังการเปลี่ยนแปลงแบบ Real-time
+            onSnapshot(query(usersCollectionRef, orderBy('lastMessageTime', 'desc')), (snapshot) => {
+                userListContainer.innerHTML = ''; // เคลียร์รายชื่อเก่าทุกครั้งที่มีการอัปเดต
+                if (snapshot.empty) {
+                    userListLoading.textContent = 'ยังไม่มีบทสนทนา';
+                    userListContainer.appendChild(userListLoading);
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const user = { user_id: doc.id, ...doc.data() };
+                    usersData[user.user_id] = user; // อัปเดตข้อมูล user ล่าสุด
+                    const userElement = createUserListItem(user);
+                    userListContainer.appendChild(userElement);
+                });
+            }, (error) => {
+                console.error("Error loading user list with snapshot:", error);
+                userListLoading.textContent = `เกิดข้อผิดพลาด: ${error.message}`;
+                userListContainer.appendChild(userListLoading);
+            });
+        }
+
+        function createUserListItem(user) {
+            const userDiv = document.createElement('div');
+            userDiv.className = 'p-4 flex items-center gap-4 cursor-pointer hover:bg-gray-50 user-list-item';
+            userDiv.dataset.userId = user.user_id;
+
+            const avatar = document.createElement('img');
+            avatar.src = user.pictureUrl || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}&background=random`;
+            avatar.className = 'w-12 h-12 rounded-full object-cover';
+            userDiv.appendChild(avatar);
+
+            const textContainer = document.createElement('div');
+            textContainer.className = 'flex-1 overflow-hidden';
+
+            // ✨ จุดสำคัญที่ 1: `nameDiv` ถูกสร้างขึ้นอย่างถูกต้องที่นี่
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'font-semibold text-gray-800';
+            nameDiv.textContent = user.displayName || 'Unknown User';
+
+            // คำนวณและแสดง Badge
+            const unreadCount = calculateUnreadCount(user);
+            if (unreadCount > 0) {
+                const badge = document.createElement('span');
+                badge.className = 'ml-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full';
+                badge.textContent = unreadCount;
+                
+                // ✨ จุดสำคัญที่ 2: `nameDiv` ถูกนำมาใช้งานที่นี่
+                nameDiv.appendChild(badge);
+            }
+            
+            // ✨ จุดสำคัญที่ 3: `nameDiv` ถูกนำไปต่อกับ Element แม่ (textContainer)
+            textContainer.appendChild(nameDiv);
+
+            userDiv.appendChild(textContainer);
+
+            return userDiv;
+        }
+
+        userListContainer.addEventListener('click', (e) => {
+            const userItem = e.target.closest('.user-list-item');
+            if (userItem && userItem.dataset.userId) {
+                const tenantId = new URLSearchParams(window.location.search).get('tenant_id');
+                const userId = userItem.dataset.userId;
+
+                // ลบคลาส 'selected' ออกจากรายการอื่นทั้งหมด (สำหรับไฮไลท์)
+                document.querySelectorAll('.user-list-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                // เพิ่มคลาส 'selected' ให้กับรายการที่ถูกคลิก
+                userItem.classList.add('selected');
+
+                // เรียกใช้ฟังก์ชันเพื่อโหลดแชทของผู้ใช้คนนี้
+                loadUserChat(tenantId, userId);
+            }
+        });
+
+        function loadUserChat(tenantId, userId) {
+            currentUserId = userId;
+            const currentUserData = usersData[userId];
+
+            chatPanel.classList.remove('hidden');
+            chatPanel.classList.add('flex');
+            placeholderPanel.classList.add('hidden');
+
+            chatHeaderAvatar.src = currentUserData.pictureUrl || `https://ui-avatars.com/api/?name=${currentUserData.displayName || 'U'}&background=random`;
+            chatHeaderUserName.textContent = currentUserData.displayName || 'Unknown User';
+            chatHeaderUserId.textContent = `ID: ${userId}`;
+
+            fetch(`/api/inbox/${tenantId}/${userId}/mark-as-read`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => console.log(data.message))
+                .catch(err => console.error("Failed to mark as read:", err));
+
+            if (unsubscribeFromChat) {
+                unsubscribeFromChat();
+            }
+
+            const chatDocRef = doc(db, 'chat_sessions', tenantId, 'users', userId);
+
+            unsubscribeFromChat = onSnapshot(chatDocRef, (doc) => {
+                if (doc.exists()) {
+                    const data = doc.data();
+                    displayChatHistory(data);
+                    // ✨ แทรกโค้ด 3 บรรทัดนี้เข้าไป
+                    // ถ้าไม่มีค่า is_bot_active ให้ถือว่าเป็น true (บอททำงานเป็นค่าเริ่มต้น)
+                    const isBotActive = (data.is_bot_active === undefined) ? true : data.is_bot_active;
+                    updateBotToggleUI(isBotActive);
+
+                } else {
+                    chatHistoryContainer.innerHTML = '<p class="text-center text-gray-500">ไม่พบประวัติการแชท</p>';
+                    // ✨ เพิ่มบรรทัดนี้ เพื่อให้ปุ่มแสดงผลถูกต้องแม้ยังไม่มีแชท
+                    updateBotToggleUI(true);
+                }
+            }, (error) => {
+                console.error("Error listening to chat:", error);
+                chatHistoryContainer.innerHTML = `<p class="p-4 text-red-500">เกิดข้อผิดพลาดในการเชื่อมต่อ Real-time</p>`;
+            });
+        }
+
+        // --- ✨ เพิ่ม Event Listener ให้กับ Toggle Switch ---
+        botToggleCheckbox.addEventListener('change', async () => {
+            if (!currentUserId || !db) return;
+            const TENANT_ID = new URLSearchParams(window.location.search).get('tenant_id');
+            const chatDocRef = doc(db, 'chat_sessions', TENANT_ID, 'users', currentUserId);
+            
+            const newStatus = botToggleCheckbox.checked;
+            try {
+                // อัปเดต field is_bot_active ใน Firestore
+                await updateDoc(chatDocRef, { is_bot_active: newStatus });
+                updateBotToggleUI(newStatus); // อัปเดต UI ทันที
+                console.log(`Bot status for ${currentUserId} changed to ${newStatus}`);
+            } catch (error) {
+                console.error('Error updating bot status:', error);
+                alert('ไม่สามารถอัปเดตสถานะบอทได้: ' + error.message);
+                // หากเกิด error ให้คืนค่า toggle กลับไปเหมือนเดิม
+                updateBotToggleUI(!newStatus);
+            }
+        });
+
+        function displayChatHistory(data) {
+            chatHistoryContainer.innerHTML = '';
+            leadScoreDisplay.textContent = data.lead_score_info || "ยังไม่มีการประเมิน";
+            
+            if (data.history && data.history.length > 0) {
+                data.history.forEach(msg => addMessageToDisplay(msg));
+            }
+            chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
+        }
+
+        function addMessageToDisplay(msg) {
+            const role = msg.role || 'user';
+
+            // 1. สร้างกรอบหลักสำหรับข้อความ 1 บรรทัด (wrapper)
+            const messageWrapper = document.createElement('div');
+            messageWrapper.className = 'flex items-end gap-3'; // ใช้ items-end เพื่อให้ avatar และ bubble อยู่แนวเดียวกัน
+
+            // 2. จัดตำแหน่งของกรอบหลัก ถ้าเป็น user ให้ชิดขวา
+            if (role === 'user') {
+                messageWrapper.classList.add('justify-end');
+            }
+
+            // 3. สร้าง Avatar
+            const avatar = document.createElement('img');
+            avatar.className = 'w-8 h-8 rounded-full object-cover flex-shrink-0';
+            if (role === 'user') {
+                const currentUserData = usersData[currentUserId];
+                avatar.src = currentUserData.pictureUrl || `https://ui-avatars.com/api/?name=${currentUserData.displayName || 'U'}&background=random`;
+            } else {
+                 avatar.src = 'https://placehold.co/40x40/94A3B8/FFFFFF?text=A'; // Placeholder Avatar for bot/admin
+            }
+
+            // 4. สร้างกรอบสำหรับ Bubble และ เวลา
+            const contentWrapper = document.createElement('div');
+            contentWrapper.className = `flex flex-col ${role === 'user' ? 'items-end' : 'items-start'}`;
+
+            // 5. สร้าง Bubble ของข้อความ
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'max-w-md p-3 rounded-lg break-words whitespace-pre-wrap';
+            bubbleDiv.textContent = (msg.parts && msg.parts.length > 0) ? msg.parts[0].text : '(no content)';
+
+            if (role === 'user') {
+                bubbleDiv.classList.add('bg-blue-500', 'text-white');
+            } else if (role === 'admin') {
+                 bubbleDiv.classList.add('bg-green-100', 'text-green-800');
+            } else { // 'model'
+                 bubbleDiv.classList.add('bg-gray-200', 'text-gray-800');
+            }
+
+            // 6. สร้างส่วนของเวลา
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'text-xs text-gray-400 mt-1 px-1';
+            if (msg.timestamp) {
+                try {
+                    timeDiv.textContent = new Date(msg.timestamp).toLocaleTimeString('th-TH', {
+                        hour: '2-digit', minute: '2-digit', hour12: false
+                    });
+                } catch (e) { /* do nothing */ }
+            }
+
+            // 7. ประกอบร่าง: นำ bubble และ time เข้าไปใน contentWrapper
+            contentWrapper.appendChild(bubbleDiv);
+            contentWrapper.appendChild(timeDiv);
+
+            // 8. ประกอบร่างสุดท้าย: นำ avatar และ contentWrapper เข้าไปใน messageWrapper ตามลำดับที่ถูกต้อง
+            if (role === 'user') {
+                messageWrapper.appendChild(contentWrapper);
+                messageWrapper.appendChild(avatar);
+            } else {
+                messageWrapper.appendChild(avatar);
+                messageWrapper.appendChild(contentWrapper);
+            }
+            
+            // 9. นำข้อความทั้งหมดไปแสดงผล
+            chatHistoryContainer.appendChild(messageWrapper);
+        }
+
+        function calculateUnreadCount(user) {
+            const history = user.history || [];
+            const lastSeen = user.admin_last_seen_timestamp ? new Date(user.admin_last_seen_timestamp) : new Date(0); // ถ้าไม่เคยเห็น ให้เริ่มนับจากอดีต
+            
+            let count = 0;
+            for (const msg of history) {
+                // นับเฉพาะข้อความจาก user ที่ใหม่กว่าเวลาที่แอดมินเห็นล่าสุด
+                if (msg.role === 'user' && msg.timestamp && new Date(msg.timestamp) > lastSeen) {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        adminReplyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const messageText = adminMessageInput.value.trim();
+            if (!messageText || !currentUserId || !db) return;
+
+            const TENANT_ID = new URLSearchParams(window.location.search).get('tenant_id');
+            const chatDocRef = doc(db, 'chat_sessions', TENANT_ID, 'users', currentUserId);
+            
+            const newMessage = {
+                role: 'admin',
+                parts: [{ text: messageText }],
+                timestamp: new Date().toISOString()
+            };
+            
+            const submitButton = e.submitter;
+            const originalButtonText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.textContent = '...';
+
+            try {
+                await updateDoc(chatDocRef, {
+                    history: arrayUnion(newMessage),
+                    is_bot_active: false
+                });
+                
+                await fetch(`/api/inbox/${TENANT_ID}/${currentUserId}/send-admin-message`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: messageText })
+                });
+                console.log("Admin message sent via API.");
+
+                adminMessageInput.value = '';
+                chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
+            } catch (error) {
+                console.error('Error sending admin reply:', error);
+                alert('ไม่สามารถส่งข้อความได้: ' + error.message);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
+                adminMessageInput.focus();
+            }
+        });
+    </script>
+</body>
+</html>

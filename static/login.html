@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Chatbot SaaS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="w-full max-w-4xl bg-white rounded-2xl shadow-xl flex overflow-hidden">
+            
+            <div class="hidden md:flex w-1/2 bg-gradient-to-br from-blue-50 to-indigo-100 p-8 flex-col items-center justify-center">
+                <div class="text-center">
+                    <img src="/static/images/salee-mascot.png" alt="Salee Mascot" class="max-w-xs h-auto rounded-lg mx-auto">
+                    <h2 class="text-3xl font-bold text-gray-800 mt-6">น้องสาลี่ ยินดีต้อนรับ!</h2>
+                    <p class="text-gray-600 mt-2">ผู้ช่วย AI อัจฉริยะสำหรับธุรกิจของคุณ</p>
+                </div>
+            </div>
+
+            <div class="w-full md:w-1/2 p-8 flex flex-col justify-center">
+                <h2 class="text-2xl font-bold text-center text-gray-800 mb-6" id="auth-title">เข้าสู่ระบบ Chatbot SaaS</h2>
+                
+                <form id="auth-form">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="email">อีเมล</label>
+                        <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-blue-500 focus:border-blue-500" id="email" type="email" required>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="password">รหัสผ่าน</label>
+                        <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:ring-blue-500 focus:border-blue-500" id="password" type="password" required>
+                    </div>
+
+                    <div id="business-type-field" class="mb-4 hidden">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="businessType">ประเภทธุรกิจของคุณ:</label>
+                        <select id="businessType" name="businessType" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">-- กรุณาเลือก --</option>
+                            <option value="physical_products_single">ขายสินค้า (ตัวเดียว/ไม่กี่ชนิด)</option>
+                            <option value="physical_products_multi">ขายสินค้า (หลากหลายประเภท)</option>
+                            <option value="service_appointment">ขายบริการ (นัดหมาย/จองคิว)</option>
+                            <option value="service_project">ขายบริการ (โปรเจกต์/กำหนดเอง)</option>
+                            <option value="other_specialized">ธุรกิจเฉพาะทางอื่นๆ</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200" type="submit" id="submit-button">
+                            เข้าสู่ระบบ
+                        </button>
+                        <button id="toggle-auth-mode" class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800 transition duration-200" type="button">
+                            ยังไม่มีบัญชี? ลงทะเบียน
+                        </button>
+                    </div>
+                    <p id="error-message" class="text-red-500 text-center mt-4"></p>
+                </form>
+
+                <div class="mt-6">
+                    <div class="relative">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t border-gray-300"></div>
+                        </div>
+                        <div class="relative flex justify-center text-sm">
+                            <span class="px-2 bg-white text-gray-500">หรือลงชื่อเข้าใช้ด้วย</span>
+                        </div>
+                    </div>
+                
+                    <div class="mt-6 grid grid-cols-1 gap-4">
+                        <div>
+                            <button type="button" id="google-signin-btn" class="w-full inline-flex items-center justify-center py-2.5 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-base font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                                <img class="w-5 h-5 mr-3" src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google icon">
+                                Sign in with Google
+                            </button>
+                        </div>
+                        <div>
+                            <button type="button" id="facebook-signin-btn" class="w-full inline-flex items-center justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm bg-blue-600 text-base font-medium text-white hover:bg-blue-700 transition-colors">
+                                <span class="sr-only">Sign in with Facebook</span>
+                                <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M20 10c0-5.523-4.477-10-10-10S0 4.477 0 10c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V10h2.54V7.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V10h2.773l-.443 2.89h-2.33v6.988C16.343 19.128 20 14.991 20 10z" clip-rule="evenodd" />
+                                </svg>
+                                Sign in with Facebook
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                 </div>
+        </div>
+    </div>
+    <script type="module">
+        // ✨ 1. Import ทุกอย่างที่จำเป็นมาที่เดียว และไม่ซ้ำซ้อน
+        import { firebaseConfig } from '/static/firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import {
+            getAuth,
+            signInWithCustomToken,
+            GoogleAuthProvider,
+            FacebookAuthProvider,
+            signInWithPopup
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    
+        // ✨ 2. เริ่มต้น Firebase และรับ object 'auth' ด้วยวิธีใหม่
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+    
+        // --- ส่วนจัดการ UI และ DOM Elements (เหมือนเดิม) ---
+        const authForm = document.getElementById('auth-form');
+        const authTitle = document.getElementById('auth-title');
+        const toggleAuthModeButton = document.getElementById('toggle-auth-mode');
+        const submitButton = document.getElementById('submit-button');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const businessTypeField = document.getElementById('business-type-field');
+        const businessTypeSelect = document.getElementById('businessType');
+        const errorMessage = document.getElementById('error-message');
+        let isRegisterMode = false;
+    
+        function updateAuthModeUI() {
+            if (isRegisterMode) {
+                authTitle.textContent = 'ลงทะเบียน Chatbot SaaS';
+                submitButton.textContent = 'ลงทะเบียน';
+                toggleAuthModeButton.textContent = 'มีบัญชีอยู่แล้ว? เข้าสู่ระบบ';
+                businessTypeField.classList.remove('hidden');
+                businessTypeSelect.setAttribute('required', 'required');
+            } else {
+                authTitle.textContent = 'เข้าสู่ระบบ Chatbot SaaS';
+                submitButton.textContent = 'เข้าสู่ระบบ';
+                toggleAuthModeButton.textContent = 'ยังไม่มีบัญชี? ลงทะเบียน';
+                businessTypeField.classList.add('hidden');
+                businessTypeSelect.removeAttribute('required');
+            }
+        }
+        toggleAuthModeButton.addEventListener('click', () => {
+            isRegisterMode = !isRegisterMode;
+            updateAuthModeUI();
+        });
+        updateAuthModeUI(); // Call on initial load
+    
+    
+        // --- ✨ 3. โค้ดสำหรับ Social Login (ส่วนที่ทำให้ปุ่มทำงาน) ---
+        const googleProvider = new GoogleAuthProvider();
+        const facebookProvider = new FacebookAuthProvider();
+        const googleBtn = document.getElementById('google-signin-btn');
+        const facebookBtn = document.getElementById('facebook-signin-btn');
+    
+        googleBtn.addEventListener('click', () => {
+            handleSocialLogin(googleProvider);
+        });
+    
+        facebookBtn.addEventListener('click', () => {
+            handleSocialLogin(facebookProvider);
+        });
+    
+        async function handleSocialLogin(provider) {
+            errorMessage.textContent = '';
+            try {
+                const result = await signInWithPopup(auth, provider);
+                const user = result.user;
+    
+                const response = await fetch('/api/auth/social-login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: user.displayName,
+                        providerId: result.providerId
+                    })
+                });
+    
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Social login failed on backend.');
+                }
+    
+                const data = await response.json();
+                window.location.href = `/dashboard?tenant_id=${data.tenant_id}`;
+            } catch (error) {
+                console.error("Social Login Error:", error);
+                errorMessage.textContent = error.message;
+            }
+        }
+    
+    
+        // --- 4. โค้ดสำหรับจัดการฟอร์มล็อกอิน/ลงทะเบียนด้วยอีเมล (เหมือนเดิม) ---
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMessage.textContent = '';
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            const businessType = businessTypeSelect.value;
+    
+            try {
+                let apiEndpoint = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
+                let requestBody = isRegisterMode ? { email, password, businessType } : { email, password };
+    
+                if (isRegisterMode && !businessType) {
+                    errorMessage.textContent = 'กรุณาเลือกประเภทธุรกิจของคุณ.';
+                    return;
+                }
+    
+                const response = await fetch(apiEndpoint, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(requestBody)
+                });
+    
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'เกิดข้อผิดพลาดในการดำเนินการ');
+                }
+                const data = await response.json();
+    
+                // ใช้ signInWithCustomToken ที่ import มา
+                await signInWithCustomToken(auth, data.custom_token);
+    
+                window.location.href = `/dashboard?tenant_id=${data.tenant_id}`;
+    
+            } catch (error) {
+                console.error("Authentication error:", error);
+                errorMessage.textContent = error.message;
+            }
+        });
+    </script>
+</body>
+</html>

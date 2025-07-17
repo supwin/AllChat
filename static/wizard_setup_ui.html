@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Setup Wizard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        #chat-container::-webkit-scrollbar { width: 4px; }
+        #chat-container::-webkit-scrollbar-thumb { background-color: #9ca3af; border-radius: 20px; }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+
+    <div id="main-content" class="w-full max-w-2xl h-[90vh] bg-white rounded-2xl shadow-2xl flex-col p-6 hidden">
+        <!-- Chat UI will be rendered here if tenant_id is valid -->
+        <div class="flex items-center pb-4 border-b">
+            <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">W</div>
+            <div class="ml-4">
+                <h1 class="text-xl font-bold text-gray-800">ผู้ช่วยตั้งค่าอัจฉริยะ</h1>
+                <p class="text-sm text-green-500 flex items-center"><span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>Online</p>
+            </div>
+        </div>
+        <div id="chat-container" class="flex-1 overflow-y-auto py-6 space-y-6"></div>
+        <form id="chat-form" class="mt-4 flex items-center">
+            <input type="text" id="message-input" placeholder="พิมพ์ข้อความของคุณที่นี่..." class="flex-1 px-4 py-3 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            <button type="submit" class="ml-4 bg-blue-500 text-white rounded-full p-3 hover:bg-blue-600 transition-all duration-300 shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+        </form>
+    </div>
+    
+    <div id="error-content" class="text-center p-8 hidden">
+        <h1 class="text-3xl font-bold text-red-500">เกิดข้อผิดพลาด</h1>
+        <p class="text-xl text-gray-600 mt-2">ไม่พบรหัสสำหรับตั้งค่า (Tenant ID) ใน URL</p>
+        <p class="text-gray-500 mt-4">กรุณากลับไปที่หน้าแรกและเริ่มต้นใหม่อีกครั้ง</p>
+        <a href="/" class="mt-6 inline-block bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-600">กลับไปหน้าแรก</a>
+    </div>
+
+    <script>
+        const mainContent = document.getElementById('main-content');
+        const errorContent = document.getElementById('error-content');
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const TENANT_ID = urlParams.get('tenant_id');
+
+        if (!TENANT_ID) {
+            errorContent.style.display = 'block';
+        } else {
+            mainContent.style.display = 'flex';
+
+            const chatForm = document.getElementById('chat-form');
+            const messageInput = document.getElementById('message-input');
+            const chatContainer = document.getElementById('chat-container');
+
+            function addMessage(message, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `flex items-start gap-3 ${sender === 'user' ? 'justify-end' : ''}`;
+                const contentDiv = document.createElement('div');
+                contentDiv.className = `max-w-xs md:max-w-md p-4 rounded-2xl ${sender === 'user' ? 'bg-blue-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-800 rounded-bl-none'}`;
+                contentDiv.textContent = message;
+                if (sender === 'user') { messageDiv.appendChild(contentDiv); } 
+                else {
+                    const avatarDiv = document.createElement('div');
+                    avatarDiv.className = 'w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0';
+                    avatarDiv.textContent = 'W';
+                    messageDiv.appendChild(avatarDiv);
+                    messageDiv.appendChild(contentDiv);
+                }
+                chatContainer.appendChild(messageDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+            addMessage('สวัสดีครับ ผมคือผู้ช่วยตั้งค่าอัจฉริยะ ยินดีที่ได้ช่วยเหลือคุณสร้างแชทบอทครับ! ก่อนอื่น บอทของคุณลูกค้าจะให้ชื่อว่าอะไรดีครับ?', 'bot');
+
+            chatForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const message = messageInput.value.trim();
+                if (!message) return;
+                addMessage(message, 'user');
+                messageInput.value = '';
+                
+                const typingIndicator = document.createElement('div');
+                typingIndicator.id = 'typing-indicator';
+                typingIndicator.innerHTML = `<div class="flex items-start gap-3"><div class="w-8 h-8 bg-blue-500 rounded-full flex-shrink-0"></div><div class="p-4 rounded-2xl bg-gray-200"><div class="flex items-center space-x-1"><span class="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></span><span class="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style="animation-delay:0.2s"></span><span class="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style="animation-delay:0.4s"></span></div></div></div>`;
+                chatContainer.appendChild(typingIndicator);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                try {
+                    const response = await fetch(`/wizard/${TENANT_ID}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: message })
+                    });
+                    
+                    // ส่วนที่แก้ไข: ตรวจสอบว่า response สำเร็จหรือไม่
+                    if (!response.ok) {
+                        let errorText = `HTTP error! status: ${response.status}`;
+                        try {
+                            // พยายามอ่าน Error เป็น JSON ก่อน
+                            const errorData = await response.json();
+                            errorText = errorData.detail || JSON.stringify(errorData);
+                        } catch (e) {
+                            // ถ้าไม่สำเร็จ ให้อ่านเป็น Text ธรรมดา
+                            errorText = await response.text();
+                        }
+                        throw new Error(errorText);
+                    }
+
+                    const data = await response.json();
+                    document.getElementById('typing-indicator').remove();
+                    addMessage(data.reply, 'bot');
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    document.getElementById('typing-indicator').remove();
+                    addMessage(`เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: ${error.message}`, 'bot');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
