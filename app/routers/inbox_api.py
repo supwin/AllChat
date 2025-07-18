@@ -50,6 +50,11 @@ async def send_admin_message(tenant_id: str, user_id: str, request: AdminMessage
         platform = user_data.get('platform')
         message_to_send = request.message
 
+        # ✨ NEW: ดึงข้อมูลแอดมินที่กำลังส่งข้อความ
+        admin_uid = current_user.get("uid")
+        admin_user_doc = db.collection('users').document(admin_uid).get()
+        admin_display_name = admin_user_doc.to_dict().get("displayName", "Admin") if admin_user_doc.exists else "Admin"
+
         # 2. ตรวจสอบ Platform และส่งข้อความ
         if platform == 'line':
             line_token = tenant_data.get('lineAccessToken')
@@ -66,6 +71,21 @@ async def send_admin_message(tenant_id: str, user_id: str, request: AdminMessage
 
         else:
             raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
+
+        # ✨ NEW: 3. สร้างและบันทึกข้อความของแอดมินลงใน history
+        admin_message_for_history = {
+            "role": "model", # ยังคงใช้ role 'model' เพื่อให้แสดงผลฝั่งขวา
+            "parts": [{"text": message_to_send}],
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "sender_type": "admin", # ระบุว่าเป็นแอดมิน
+            "sender_id": admin_uid,
+            "sender_name": admin_display_name
+        }
+        
+        # ใช้ ArrayUnion เพื่อเพิ่มข้อความใหม่เข้าไปใน array ของ history
+        user_chat_doc_ref.update({
+            "history": firestore.ArrayUnion([admin_message_for_history])
+        })
 
         return {"status": "ok", "message": f"Message sent to {user_id} via {platform}."}
 

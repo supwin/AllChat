@@ -48,6 +48,7 @@ app.include_router(webhook.router)    # Webhook endpoints for LINE and Facebook
 app.include_router(assistant.router)  # AI assistant endpoints (settings assistant, wizard)
 app.include_router(inbox.router)
 app.include_router(inbox_api.router)
+app.include_router(user.router) 
 
 
 # --- HTML Serving Endpoints ---

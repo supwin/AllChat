@@ -31,14 +31,29 @@ async def register_user(request: AuthRequest):
         
         tenant_data = {
             'createdAt': firestore.SERVER_TIMESTAMP,
-            'status': 'active',  # Set to active upon registration
-            'owner_uid': user.uid,  # Link tenant to this user
-            'email': request.email,  # Store email for reference
-            'businessType': request.businessType  # Initial business type from registration
+            'status': 'active',
+            'owner_uid': user.uid,
+            'email': request.email,
+            'businessType': request.businessType,
+            'members': { # ✨ NEW: Add members map with the creator as owner
+                user.uid: 'owner'
+            }
         }
-        # Note: .set() is synchronous for the Python Admin SDK
-        tenant_doc_ref.set(tenant_data, merge=True)
+        tenant_doc_ref.set(tenant_data)
         print(f"✅ New tenant '{new_tenant_id}' created and linked to user '{user.uid}'.")
+
+        # ✨ NEW: 2.5 Create a user profile document in 'users' collection
+        user_doc_ref = db.collection('users').document(user.uid)
+        user_doc_ref.set({
+            'uid': user.uid,
+            'email': request.email,
+            'displayName': request.email, # Use email as initial display name
+            'createdAt': firestore.SERVER_TIMESTAMP,
+            'tenants': {
+                new_tenant_id: 'owner' # Add the new tenant with 'owner' role
+            }
+        })
+        print(f"✅ New user profile created for '{user.uid}'.")
 
         # 3. Generate a Custom Token for the user to login on the client-side
         custom_token = firebase_auth.create_custom_token(user.uid)
@@ -94,36 +109,52 @@ async def social_login(request: SocialLoginRequest):
     If user exists, log them in. If not, create a new user and tenant.
     """
     try:
+        uid = request.uid
+        email = request.email
+        display_name = request.displayName
+
+        user_ref = db.collection('users').document(uid)
+        user_doc = user_ref.get()
         # 1. ตรวจสอบว่ามี tenant ที่ผูกกับ UID นี้อยู่แล้วหรือยัง
-        tenant_query = db.collection('tenants').where('owner_uid', '==', request.uid).limit(1).get()
+        if user_doc.exists:
+            print(f"✅ Existing social user '{email}' logged in.")
+            # The frontend will then call another endpoint to get the list of tenants
+            return {"message": "Existing user logged in.", "uid": uid, "is_new_user": False}
 
-        tenant_id = None
-        for doc in tenant_query:
-            tenant_id = doc.id
-            break
+        # Case 2: New User
+        else:
+            print(f"✨ New social user '{email}'. Creating new user profile and tenant...")
+            
+            # 2.1 Create a new tenant document
+            tenant_doc_ref = db.collection('tenants').document()
+            new_tenant_id = tenant_doc_ref.id
+            tenant_data = {
+                'createdAt': firestore.SERVER_TIMESTAMP,
+                'status': 'active',
+                'owner_uid': uid,
+                'email': email,
+                'tenantName': f"{display_name}'s Shop", # Default tenant name
+                'members': { uid: 'owner' }
+            }
+            tenant_doc_ref.set(tenant_data)
+            print(f"✅ New tenant '{new_tenant_id}' created for user '{uid}'.")
 
-        # 2. ถ้ามี tenant อยู่แล้ว (เคยล็อกอินแล้ว) ให้จบการทำงานและส่ง tenant_id กลับไป
-        if tenant_id:
-            print(f"✅ Existing social user '{request.email}' logged in. Tenant: {tenant_id}")
-            return {"tenant_id": tenant_id}
+            # 2.2 Create the new user profile document
+            user_ref.set({
+                'uid': uid,
+                'email': email,
+                'displayName': display_name,
+                'createdAt': firestore.SERVER_TIMESTAMP,
+                'tenants': { new_tenant_id: 'owner' }
+            })
+            print(f"✅ New user profile created for '{uid}'.")
 
-        # 3. ถ้ายังไม่มี ให้สร้าง tenant ใหม่ (เป็นการลงทะเบียนครั้งแรก)
-        print(f"✨ New social user '{request.email}'. Creating new tenant...")
-        tenant_doc_ref = db.collection('tenants').document()
-        new_tenant_id = tenant_doc_ref.id
-
-        tenant_data = {
-            'createdAt': firestore.SERVER_TIMESTAMP,
-            'status': 'active',
-            'owner_uid': request.uid, # ใช้ UID ที่ได้จาก Social Provider
-            'email': request.email,
-            'tenantName': request.displayName, # ใช้ชื่อจาก Social Provider เป็นค่าเริ่มต้น
-            'loginProvider': request.providerId # เก็บข้อมูลว่าล็อกอินมาจากไหน (e.g., 'google.com')
-        }
-        tenant_doc_ref.set(tenant_data)
-        print(f"✅ New tenant '{new_tenant_id}' created for user '{request.uid}'.")
-
-        return {"tenant_id": new_tenant_id}
+            return {
+                "message": "New user and tenant created successfully.",
+                "uid": uid,
+                "is_new_user": True,
+                "new_tenant_id": new_tenant_id
+            }
 
     except Exception as e:
         print(f"❌ Social Login error: {e}")
