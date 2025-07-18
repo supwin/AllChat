@@ -171,6 +171,20 @@
                     <p class="text-sm text-gray-500 mt-2">Webhook URL สำหรับ Facebook: <code id="facebook-webhook-url" class="bg-gray-200 p-1 rounded-md"></code> <button class="ml-2 text-blue-600 hover:underline" onclick="copyToClipboard('facebook-webhook-url')">คัดลอก</button></p>
                 </div>
 
+                <div>
+                    <label for="websiteWidget" class="block text-gray-700 text-sm font-semibold mb-2">โค้ดสำหรับติดตั้ง Chat Widget บนเว็บไซต์ของคุณ:</label>
+                    <p class="text-sm text-gray-500 mb-2">
+                        คัดลอกโค้ดนี้ไปวางไว้ในไฟล์ HTML ของเว็บไซต์คุณ ก่อนแท็กปิด <code class="bg-gray-200 px-1 rounded">&lt;/body&gt;</code>
+                        (<a href="#" id="link-to-widget-guide" class="text-blue-600 hover:underline">ดูคู่มือการติดตั้งฉบับเต็ม</a>)
+                    </p>
+                    <div class="relative">
+                        <textarea id="widget-script-textarea" readonly class="w-full bg-gray-800 text-green-400 p-4 rounded-lg border border-gray-600 font-mono text-sm" rows="3"></textarea>
+                        <button type="button" onclick="copyWidgetScript()" class="absolute top-3 right-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-3 rounded-md transition-colors">
+                            คัดลอกโค้ด
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Save Button -->
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
                     บันทึกการตั้งค่า
@@ -467,6 +481,22 @@
                     showToast('บันทึกข้อมูลล้มเหลว: ' + error.message, 'error');
                 }
             });
+
+            // --- Widget Script Generation ---
+            const widgetScriptTextarea = document.getElementById('widget-script-textarea');
+            if (TENANT_ID) {
+                // You would replace 'https://your-service-url' with your actual domain
+                const scriptCode = `<script src="${window.location.origin}/widget.js" data-tenant-id="${TENANT_ID}" async defer><\/script>`;
+                widgetScriptTextarea.value = scriptCode;
+            }
+            document.getElementById('link-to-widget-guide').href = `/website-setup-guide?tenant_id=${TENANT_ID}`;
+            
+            // --- New copy function for the widget textarea ---
+            window.copyWidgetScript = function() {
+                widgetScriptTextarea.select();
+                document.execCommand('copy');
+                showToast('คัดลอกสคริปต์แล้ว!');
+            }
 
             // --- Copy to Clipboard Function ---
             window.copyToClipboard = function(elementId) {

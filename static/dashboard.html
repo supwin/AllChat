@@ -75,7 +75,7 @@
                     <p class="mt-2 text-sm text-gray-600">เชื่อมต่อกับเพจ Facebook ของคุณ</p>
                 </a>
                 <!-- Website Widget Card -->
-                <a href="#" id="link-to-settings-2" class="block p-6 bg-white rounded-lg shadow hover:shadow-xl transition-shadow">
+                <a href="#" id="link-to-widget-guide" class="block p-6 bg-white rounded-lg shadow hover:shadow-xl transition-shadow">
                      <div class="flex items-center">
                         <i class="fas fa-window-maximize text-4xl text-indigo-500"></i>
                         <h4 class="text-lg font-bold ml-4">วิดเจ็ตบนเว็บไซต์</h4>
@@ -136,7 +136,7 @@
     <script type="module">
         import { firebaseConfig } from '/static/firebase-config.js'; 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
@@ -187,11 +187,11 @@
             const settingsUrl = `/settings?tenant_id=${TENANT_ID}`;
             const inboxUrl = `/inbox?tenant_id=${TENANT_ID}`;
             
-            document.getElementById('link-to-settings-2').href = settingsUrl;
             document.getElementById('link-to-settings-3').href = settingsUrl;
             document.getElementById('link-to-inbox').href = inboxUrl;
             document.getElementById('link-to-line-guide').href = `/line-setup-guide?tenant_id=${TENANT_ID}`;
             document.getElementById('link-to-facebook-guide').href = `/facebook-setup-guide?tenant_id=${TENANT_ID}`;
+            document.getElementById('link-to-widget-guide').href = `/website-setup-guide?tenant_id=${TENANT_ID}`;
             
             async function fetchTenantData(tenantId, uid) {
                 try {

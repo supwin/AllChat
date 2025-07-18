@@ -267,15 +267,28 @@
 
             const chatDocRef = doc(db, 'chat_sessions', tenantId, 'users', userId);
 
-            unsubscribeFromChat = onSnapshot(chatDocRef, (doc) => {
+            unsubscribeFromChat = onSnapshot(chatDocRef, async (doc) => { // เพิ่ม async
                 if (doc.exists()) {
                     const data = doc.data();
                     displayChatHistory(data);
-                    // ✨ แทรกโค้ด 3 บรรทัดนี้เข้าไป
-                    // ถ้าไม่มีค่า is_bot_active ให้ถือว่าเป็น true (บอททำงานเป็นค่าเริ่มต้น)
-                    const isBotActive = (data.is_bot_active === undefined) ? true : data.is_bot_active;
-                    updateBotToggleUI(isBotActive);
 
+                    let isBotActive = (data.is_bot_active === undefined) ? true : data.is_bot_active;
+                    const history = data.history || [];
+
+                    if (history.length > 0) {
+                        const lastMessage = history[history.length - 1];
+                        if (lastMessage.timestamp) {
+                            const lastMessageTimestamp = new Date(lastMessage.timestamp);
+                            const hoursDiff = (new Date() - lastMessageTimestamp) / (1000 * 60 * 60);
+
+                            if (hoursDiff > 1 && isBotActive === false) {
+                                console.log("Admin opened an old chat (>1hr), turning bot ON.");
+                                await updateDoc(chatDocRef, { is_bot_active: true });
+                                isBotActive = true; 
+                            }
+                        }
+                    }
+                    updateBotToggleUI(isBotActive);
                 } else {
                     chatHistoryContainer.innerHTML = '<p class="text-center text-gray-500">ไม่พบประวัติการแชท</p>';
                     // ✨ เพิ่มบรรทัดนี้ เพื่อให้ปุ่มแสดงผลถูกต้องแม้ยังไม่มีแชท

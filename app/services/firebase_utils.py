@@ -22,11 +22,8 @@ def _initialize_firebase_once():
         return
 
     try:
-        # Construct the path to the service account key file
-        # Assumes serviceAccountKey.json is in the project root (one level up from 'app' folder)
-        cred_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "serviceAccountKey.json")
-        cred = credentials.Certificate(cred_path)
-        firebase_admin.initialize_app(cred)
+        print("Initializing Firebase Admin SDK using Application Default Credentials...")
+        firebase_admin.initialize_app()
         _db = firestore.client()
         _auth = firebase_auth
         print("✅ Firebase Admin SDK connection successful.")

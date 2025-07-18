@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คู่มือการติดตั้งวิดเจ็ตบนเว็บไซต์</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .guide-step {
+            @apply bg-white p-6 rounded-lg shadow-md mb-6;
+        }
+        .guide-step h3 {
+            @apply text-xl font-bold text-gray-800 mb-3 border-b pb-2;
+        }
+        .guide-step p {
+            @apply text-gray-700 leading-relaxed;
+        }
+        code.inline-code {
+            @apply bg-gray-200 text-red-600 font-mono px-2 py-1 rounded-md text-sm;
+        }
+        pre.code-block {
+            @apply bg-gray-800 text-white p-4 rounded-lg mt-4 overflow-x-auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <header class="bg-white shadow-sm">
+        <div class="max-w-4xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+            <a href="#" id="back-to-settings" class="text-sm text-blue-600 hover:underline">&larr; กลับไปหน้าตั้งค่า</a>
+            <h1 class="text-3xl font-bold text-gray-900 mt-2">คู่มือการติดตั้งวิดเจ็ตบนเว็บไซต์</h1>
+            <p class="text-gray-600 mt-1">นำ Chatbot ของคุณไปแสดงบนเว็บไซต์เพื่อเริ่มพูดคุยกับลูกค้าได้ทันที</p>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+
+        <div class="guide-step">
+            <h3>ขั้นตอนที่ 1: คัดลอกสคริปต์ของคุณ</h3>
+            <p>
+                นี่คือโค้ดสคริปต์เฉพาะสำหรับร้านค้าของคุณ ที่จะใช้ในการแสดงผล Chatbot บนหน้าเว็บไซต์
+            </p>
+            <div class="mt-4">
+                <label for="widget-script" class="block text-sm font-semibold text-gray-600 mb-1">โค้ดสำหรับติดตั้ง:</label>
+                <div class="relative">
+                    <textarea id="widget-script" readonly class="w-full bg-gray-100 text-gray-800 p-3 rounded-md border border-gray-300 font-mono text-sm" rows="3"></textarea>
+                    <button onclick="copyToClipboard('widget-script')" class="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-3 rounded-md">
+                        คัดลอกโค้ด
+                    </button>
+                </div>
+                 <p class="text-xs text-yellow-600 mt-2 font-semibold">
+                    หมายเหตุ: ฟีเจอร์นี้ยังอยู่ในระหว่างการพัฒนา สคริปต์นี้เป็นเพียงตัวอย่างและยังไม่สามารถใช้งานได้จริง
+                </p>
+            </div>
+        </div>
+
+        <div class="guide-step">
+            <h3>ขั้นตอนที่ 2: นำสคริปต์ไปวางบนเว็บไซต์ของคุณ</h3>
+            <p>
+                เปิดไฟล์ HTML ของหน้าเว็บที่คุณต้องการให้ Chatbot ปรากฏขึ้น จากนั้นนำสคริปต์ที่คัดลอกมาไปวางไว้ที่ส่วนท้ายสุดของโค้ด **ก่อน** แท็กปิด <code class="inline-code">&lt;/body&gt;</code>
+            </p>
+            <p class="mt-2">
+                การวางสคริปต์ไว้ตำแหน่งนี้จะช่วยให้หน้าเว็บของคุณโหลดได้เร็วขึ้นโดยไม่รอการโหลดของ Chatbot ครับ
+            </p>
+            <pre class="code-block"><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;เว็บไซต์ของคุณ&lt;/title&gt;
+  &lt;!-- ... โค้ดส่วน head อื่นๆ ... --&gt;
+&lt;/head&gt;
+&lt;body&gt;
+
+  &lt;h1&gt;ยินดีต้อนรับสู่เว็บไซต์ของเรา&lt;/h1&gt;
+  &lt;!-- ... เนื้อหาเว็บไซต์ของคุณ ... --&gt;
+
+
+  &lt;!-- ✨ วางสคริปต์ของ AllChat ไว้ที่นี่ ✨ --&gt;
+  &lt;script src="https://allchat.app/widget.js" data-tenant-id="รหัสร้านค้าของคุณ" async defer&gt;&lt;/script&gt;
+  
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+        </div>
+
+        <div class="guide-step">
+            <h3>ขั้นตอนที่ 3: เผยแพร่และตรวจสอบ</h3>
+            <p>
+                หลังจากที่คุณบันทึกไฟล์และอัปเดตเว็บไซต์ของคุณแล้ว ให้ลองเปิดหน้าเว็บนั้นอีกครั้ง คุณควรจะเห็นไอคอนของ Chatbot ปรากฏขึ้นที่มุมขวาล่างของหน้าจอ
+            </p>
+            <p class="mt-2">
+                หากไม่เห็นการเปลี่ยนแปลง ให้ลองล้างแคช (Cache) ของเบราว์เซอร์หรือรอสักครู่เพื่อให้เซิร์ฟเวอร์อัปเดตไฟล์ล่าสุดครับ
+            </p>
+        </div>
+        
+    </main>
+    
+    <div id="toast-notification" class="hidden fixed bottom-5 right-5 bg-green-500 text-white py-3 px-6 rounded-lg shadow-lg">คัดลอกโค้ดแล้ว!</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tenantId = urlParams.get('tenant_id');
+            const widgetScriptTextarea = document.getElementById('widget-script');
+            const backToSettingsLink = document.getElementById('back-to-settings');
+
+            if (tenantId) {
+                // สร้างโค้ดสคริปต์ตัวอย่าง
+                const scriptCode = `<script src="https://your-service-url/widget.js" data-tenant-id="${tenantId}" async defer><\/script>`;
+                widgetScriptTextarea.value = scriptCode;
+                // ตั้งค่าลิงก์ย้อนกลับ
+                backToSettingsLink.href = `/settings?tenant_id=${tenantId}`;
+            } else {
+                widgetScriptTextarea.value = 'ไม่พบรหัสร้านค้า กรุณากลับไปหน้าตั้งค่า';
+                backToSettingsLink.href = `/`;
+            }
+        });
+
+        function copyToClipboard(elementId) {
+            const textToCopy = document.getElementById(elementId).value;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                // แสดง Toast Notification
+                const toast = document.getElementById('toast-notification');
+                toast.classList.remove('hidden');
+                setTimeout(() => {
+                    toast.classList.add('hidden');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+    </script>
+
+</body>
+</html>

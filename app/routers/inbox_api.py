@@ -19,7 +19,7 @@ async def mark_chat_as_read(tenant_id: str, user_id: str):
         user_doc_ref = db.collection('chat_sessions').document(tenant_id).collection('users').document(user_id)
         
         # อัปเดตฟิลด์ admin_last_seen_timestamp เป็นเวลาปัจจุบัน
-        await user_doc_ref.update({
+        user_doc_ref.update({
             'admin_last_seen_timestamp': datetime.datetime.now(datetime.timezone.utc).isoformat()
         })
         return {"status": "ok", "message": f"Chat for {user_id} marked as read."}
@@ -38,8 +38,8 @@ async def send_admin_message(tenant_id: str, user_id: str, request: AdminMessage
     """
     try:
         # 1. ดึงข้อมูลผู้ใช้เพื่อหา Platform และ Token
-        tenant_doc = await db.collection('tenants').document(tenant_id).get()
-        user_doc = await db.collection('chat_sessions').document(tenant_id).collection('users').document(user_id).get()
+        tenant_doc = db.collection('tenants').document(tenant_id).get()
+        user_doc = db.collection('chat_sessions').document(tenant_id).collection('users').document(user_id).get()
 
         if not tenant_doc.exists or not user_doc.exists:
             raise HTTPException(status_code=404, detail="Tenant or User not found")

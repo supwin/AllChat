@@ -54,7 +54,8 @@ async def line_webhook(tenant_id: str, request: Request):
             
             # ✨ 2. เปลี่ยนมาเรียกใช้ฟังก์ชัน send_line_message
             # เพื่อให้โค้ดมีรูปแบบเดียวกับ Facebook
-            send_line_message(reply_token, reply_msg, line_token)
+            if reply_msg:
+                send_line_message(reply_token, reply_msg, line_token)
 
         except Exception as e:
             print(f"❌ Error processing a LINE event for tenant {tenant_id}: {e}")
@@ -99,7 +100,8 @@ async def facebook_webhook_handler(tenant_id: str, request: Request):
 
                     if message_text:
                         reply_text = get_bot_response(tenant_id, sender_id, message_text, platform="facebook", display_name=display_name, last_message_time=current_time)
-                        send_facebook_message(sender_id, reply_text, page_token)
+                        if reply_text:
+                            send_facebook_message(sender_id, reply_text, page_token)
                         
     return "EVENT_RECEIVED"
 

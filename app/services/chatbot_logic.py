@@ -64,6 +64,41 @@ def get_bot_response(
         history_doc = history_ref.get()
         user_profile_data = history_doc.to_dict() if history_doc.exists else {}
         history_data_from_db = user_profile_data.get('history', [])
+
+        if history_data_from_db: # ตรวจสอบว่ามีประวัติแชทหรือไม่
+            last_message = history_data_from_db[-1]
+            if 'timestamp' in last_message:
+                try:
+                    # แปลง ISO string ที่อาจมี 'Z' หรือ '+00:00' ให้ถูกต้อง
+                    last_message_timestamp_str = last_message['timestamp'].replace('Z', '+00:00')
+                    last_message_timestamp = datetime.datetime.fromisoformat(last_message_timestamp_str)
+                    
+                    # ตรวจสอบว่า last_message_timestamp มี timezone หรือไม่
+                    if last_message_timestamp.tzinfo is None:
+                        last_message_timestamp = last_message_timestamp.replace(tzinfo=datetime.timezone.utc)
+
+                    hours_diff = (datetime.datetime.now(datetime.timezone.utc) - last_message_timestamp).total_seconds() / 3600
+                    
+                    if hours_diff > 1:
+                        print(f"INFO: Chat for user {user_id} is older than 1 hour. Forcing bot ON.")
+                        history_ref.set({'is_bot_active': True}, merge=True)
+                        user_profile_data['is_bot_active'] = True
+                except (ValueError, TypeError) as e:
+                    print(f"WARN: Could not parse timestamp '{last_message.get('timestamp')}' for user {user_id}. Error: {e}")
+
+
+        # --- ✨ 2. ตรรกะเดิมในการตรวจสอบสถานะบอท (ทำงานหลังการตรวจสอบเวลา) ---
+        is_bot_active = user_profile_data.get('is_bot_active', True)
+        if not is_bot_active:
+            print(f"INFO: Bot is OFF for user {user_id}. Storing message and skipping reply.")
+            user_msg_for_history = {
+                'role': 'user',
+                'parts': [{'text': user_input}],
+                'timestamp': last_message_time or datetime.datetime.now(datetime.timezone.utc).isoformat()
+            }
+            history_ref.set({'history': firestore.ArrayUnion([user_msg_for_history])}, merge=True)
+            return ""
+
         current_summary = user_profile_data.get('summary', "")
         
         # --- ส่วนของโค้ด Summarization ---

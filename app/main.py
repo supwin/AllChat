@@ -88,6 +88,11 @@ async def read_facebook_guide():
     """Serves the facebook-setup-guide.html page."""
     return os.path.join(static_dir, "facebook-setup-guide.html")
 
+@app.get("/website-setup-guide", response_class=FileResponse)
+async def read_website_guide():
+    """Serves the website-setup-guide.html page."""
+    return os.path.join(static_dir, "website-setup-guide.html")    
+
 @app.get("/login", response_class=FileResponse)
 async def read_login():
     """Serves the login.html page."""
