@@ -176,7 +176,7 @@
                 }
     
                 const data = await response.json();
-                window.location.href = `/dashboard?tenant_id=${data.tenant_id}`;
+                window.location.href = `/tenant-selector.html`;
             } catch (error) {
                 console.error("Social Login Error:", error);
                 errorMessage.textContent = error.message;
@@ -216,7 +216,7 @@
                 // ใช้ signInWithCustomToken ที่ import มา
                 await signInWithCustomToken(auth, data.custom_token);
     
-                window.location.href = `/dashboard?tenant_id=${data.tenant_id}`;
+                window.location.href = `/tenant-selector.html`;
     
             } catch (error) {
                 console.error("Authentication error:", error);

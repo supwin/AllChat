@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เลือกร้านค้าของคุณ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div id="loader" class="text-center">
+        <i class="fas fa-spinner fa-spin text-4xl text-blue-500"></i>
+        <p class="mt-2 text-gray-600">กำลังโหลดข้อมูลผู้ใช้...</p>
+    </div>
+
+    <div id="tenant-selector-container" class="hidden w-full max-w-md bg-white p-8 rounded-xl shadow-lg">
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">เลือกร้านค้าที่จะจัดการ</h1>
+            <p id="user-email" class="text-gray-500 mt-1"></p>
+        </div>
+
+        <div id="tenant-list" class="space-y-3 mb-6">
+            <!-- รายชื่อ Tenant จะถูกสร้างโดย JavaScript ที่นี่ -->
+        </div>
+
+        <div class="border-t pt-6">
+             <a href="/wizard_setup_ui.html" class="block w-full text-center bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition-colors font-semibold">
+                <i class="fas fa-plus-circle mr-2"></i>สร้างร้านค้าใหม่
+            </a>
+            <button id="logout-button" class="w-full text-center text-gray-500 hover:text-red-500 mt-4 py-2">
+                ออกจากระบบ
+            </button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Imports -->
+    <script type="module">
+        import { firebaseConfig } from '/static/firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        const loader = document.getElementById('loader');
+        const container = document.getElementById('tenant-selector-container');
+        const tenantListDiv = document.getElementById('tenant-list');
+        const userEmailEl = document.getElementById('user-email');
+        const logoutButton = document.getElementById('logout-button');
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userEmailEl.textContent = `ล็อกอินในชื่อ: ${user.email}`;
+                try {
+                    // ขอ ID Token เพื่อใช้ยืนยันตัวตนกับ Backend
+                    const idToken = await user.getIdToken(true);
+
+                    // เรียก API /api/user/me/tenants เพื่อดึงรายชื่อร้านค้า
+                    const response = await fetch('/api/user/me/tenants', {
+                        headers: {
+                            'Authorization': `Bearer ${idToken}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('ไม่สามารถดึงข้อมูลร้านค้าได้');
+                    }
+
+                    const tenants = await response.json();
+                    
+                    renderTenantList(tenants);
+
+                } catch (error) {
+                    console.error("Error fetching tenants:", error);
+                    tenantListDiv.innerHTML = `<p class="text-center text-red-500">เกิดข้อผิดพลาดในการโหลดข้อมูลร้านค้า</p>`;
+                } finally {
+                    loader.classList.add('hidden');
+                    container.classList.remove('hidden');
+                }
+
+            } else {
+                // ถ้าไม่มีผู้ใช้ ให้กลับไปหน้า login
+                window.location.href = '/login.html';
+            }
+        });
+
+        function renderTenantList(tenants) {
+            tenantListDiv.innerHTML = ''; // เคลียร์รายการเก่า
+            if (tenants && tenants.length > 0) {
+                tenants.forEach(tenant => {
+                    const tenantElement = document.createElement('a');
+                    tenantElement.href = `/dashboard?tenant_id=${tenant.tenant_id}`;
+                    tenantElement.className = 'block w-full text-left p-4 bg-gray-50 border rounded-lg hover:bg-blue-100 hover:border-blue-400 transition-colors';
+                    
+                    tenantElement.innerHTML = `
+                        <div class="font-bold text-gray-800">${tenant.tenantName}</div>
+                        <div class="text-sm text-gray-500">สิทธิ์: ${tenant.role}</div>
+                    `;
+                    tenantListDiv.appendChild(tenantElement);
+                });
+            } else {
+                tenantListDiv.innerHTML = `<p class="text-center text-gray-500 p-4 bg-gray-50 rounded-lg">คุณยังไม่มีร้านค้าในระบบ<br>กรุณาสร้างร้านค้าใหม่</p>`;
+            }
+        }
+
+        logoutButton.addEventListener('click', () => {
+            signOut(auth).then(() => {
+                window.location.href = '/login.html';
+            }).catch(error => console.error('Sign out error:', error));
+        });
+
+    </script>
+</body>
+</html>

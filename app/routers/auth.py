@@ -26,7 +26,7 @@ async def register_user(request: AuthRequest):
         print(f"✅ Firebase Auth User created: {user.uid}")
 
         # 2. Create a new tenant document and link it to the user
-        tenant_doc_ref = db.collection('tenants').document()  # Let Firestore generate ID
+        tenant_doc_ref = db.collection('tenants').document()
         new_tenant_id = tenant_doc_ref.id
         
         tenant_data = {
@@ -35,22 +35,22 @@ async def register_user(request: AuthRequest):
             'owner_uid': user.uid,
             'email': request.email,
             'businessType': request.businessType,
-            'members': { # ✨ NEW: Add members map with the creator as owner
+            'members': {
                 user.uid: 'owner'
             }
         }
         tenant_doc_ref.set(tenant_data)
         print(f"✅ New tenant '{new_tenant_id}' created and linked to user '{user.uid}'.")
 
-        # ✨ NEW: 2.5 Create a user profile document in 'users' collection
+        # 2.5 Create a user profile document in 'users' collection
         user_doc_ref = db.collection('users').document(user.uid)
         user_doc_ref.set({
             'uid': user.uid,
             'email': request.email,
-            'displayName': request.email, # Use email as initial display name
+            'displayName': request.email,
             'createdAt': firestore.SERVER_TIMESTAMP,
             'tenants': {
-                new_tenant_id: 'owner' # Add the new tenant with 'owner' role
+                new_tenant_id: 'owner'
             }
         })
         print(f"✅ New user profile created for '{user.uid}'.")
@@ -65,40 +65,32 @@ async def register_user(request: AuthRequest):
         print(f"❌ Registration error: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Registration failed: {e}")
 
+# --- ✨ REVISED login_user function ---
 @router.post("/login")
 async def login_user(request: AuthRequest):
     """
-    Logs in a user by verifying credentials and providing a Firebase Custom Token.
+    (แก้ไขใหม่) ตรวจสอบผู้ใช้และสร้าง Custom Token สำหรับให้ Frontend นำไปเข้าระบบ
+    ฟังก์ชันนี้จะไม่ตรวจสอบรหัสผ่านโดยตรง แต่จะสร้าง Token ให้ Frontend
+    ที่ทำการ signInWithEmailAndPassword สำเร็จแล้วนำไปใช้ต่อ
     """
     if not db:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database is not available.")
     try:
-        # In a production scenario, you would NOT pass password from frontend to backend for validation.
-        # Instead, the frontend Firebase SDK would handle email/password sign-in,
-        # get an ID token, and send that ID token to your backend for verification.
-        # For simplicity in this example, we're assuming the user exists and we fetch their UID by email.
-        # The client-side will then use the custom_token to sign in.
-
+        # Backend จะไม่ตรวจสอบรหัสผ่าน
+        # แต่จะหาผู้ใช้จาก Email เพื่อสร้าง Token ให้
         user = firebase_auth.get_user_by_email(request.email)
         
-        # Find the tenant_id associated with this user
-        tenant_query = db.collection('tenants').where('owner_uid', '==', user.uid).limit(1).get()
-        tenant_id = None
-        for doc in tenant_query:
-            tenant_id = doc.id
-            break
-
-        if not tenant_id:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found for this user.")
-
-        # Generate a Custom Token for the user to login on the client-side
+        # สร้าง Custom Token เพื่อส่งกลับให้ Frontend
         custom_token = firebase_auth.create_custom_token(user.uid)
-        return {"custom_token": custom_token.decode('utf-8'), "uid": user.uid, "tenant_id": tenant_id}
+        
+        # ไม่ต้องส่ง tenant_id กลับไปแล้ว เพราะจะไปเลือกที่หน้า tenant-selector
+        return {"custom_token": custom_token.decode('utf-8'), "uid": user.uid}
 
     except firebase_auth.UserNotFoundError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials.")
     except Exception as e:
-        print(f"❌ Login error: {e}")
+        # แก้ไขการแสดงผล Error ให้ชัดเจนขึ้น
+        print(f"❌ Login error: {type(e).__name__} - {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Login failed: {e}")
 
 
@@ -106,7 +98,6 @@ async def login_user(request: AuthRequest):
 async def social_login(request: SocialLoginRequest):
     """
     Handles user registration/login from social providers.
-    If user exists, log them in. If not, create a new user and tenant.
     """
     try:
         uid = request.uid
@@ -115,17 +106,13 @@ async def social_login(request: SocialLoginRequest):
 
         user_ref = db.collection('users').document(uid)
         user_doc = user_ref.get()
-        # 1. ตรวจสอบว่ามี tenant ที่ผูกกับ UID นี้อยู่แล้วหรือยัง
+
         if user_doc.exists:
             print(f"✅ Existing social user '{email}' logged in.")
-            # The frontend will then call another endpoint to get the list of tenants
             return {"message": "Existing user logged in.", "uid": uid, "is_new_user": False}
-
-        # Case 2: New User
         else:
             print(f"✨ New social user '{email}'. Creating new user profile and tenant...")
             
-            # 2.1 Create a new tenant document
             tenant_doc_ref = db.collection('tenants').document()
             new_tenant_id = tenant_doc_ref.id
             tenant_data = {
@@ -133,13 +120,11 @@ async def social_login(request: SocialLoginRequest):
                 'status': 'active',
                 'owner_uid': uid,
                 'email': email,
-                'tenantName': f"{display_name}'s Shop", # Default tenant name
+                'tenantName': f"{display_name}'s Shop",
                 'members': { uid: 'owner' }
             }
             tenant_doc_ref.set(tenant_data)
-            print(f"✅ New tenant '{new_tenant_id}' created for user '{uid}'.")
 
-            # 2.2 Create the new user profile document
             user_ref.set({
                 'uid': uid,
                 'email': email,
@@ -147,7 +132,6 @@ async def social_login(request: SocialLoginRequest):
                 'createdAt': firestore.SERVER_TIMESTAMP,
                 'tenants': { new_tenant_id: 'owner' }
             })
-            print(f"✅ New user profile created for '{uid}'.")
 
             return {
                 "message": "New user and tenant created successfully.",

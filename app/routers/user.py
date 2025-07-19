@@ -1,6 +1,6 @@
 # app/routers/user.py
 from fastapi import APIRouter, Depends, HTTPException
-from .auth import get_current_user
+from ..dependencies import get_current_user
 from ..services.firebase_utils import db
 
 router = APIRouter(

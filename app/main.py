@@ -1,103 +1,95 @@
+# Force update
 # app/main.py
-import os
+     
 from fastapi import FastAPI
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
+import os
 
-# Import Firebase instances (db, auth) which are initialized directly when firebase_utils is imported
-from .services.firebase_utils import db, auth
-# No need to import end_user_model, wizard_model directly here anymore
-# from .config.settings import initialize_ai_models, end_user_model, wizard_model 
+# 1. Import Routers ทั้งหมดที่คุณมี
+# ตรวจสอบให้แน่ใจว่าชื่อตรงกับไฟล์ในโฟลเดอร์ /routers
+from .routers import auth, tenant, webhook, assistant, inbox, inbox_api, user
 
-# Import routers
-from .routers import auth, tenant, webhook, assistant, inbox, inbox_api
-
-# Load environment variables from .env file
-load_dotenv()
-
-# Initialize FastAPI app
-app = FastAPI()
-
-# Add CORS middleware to allow cross-origin requests
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods (GET, POST, PUT, DELETE, etc.)
-    allow_headers=["*"],  # Allows all headers
+# --- App Initialization ---
+app = FastAPI(
+    title="AllChat API",
+    description="Backend services for the AllChat Platform.",
+    version="1.0.0"
 )
 
-# Define the path to the static files directory
-# It's one level up from 'app' folder, then into 'static'
-static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static")
-# Mount static files to be served from the /static URL path
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+# --- CORS Middleware ---
+# สำคัญมากเพื่อให้ Frontend คุยกับ Backend ได้
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # ใน Production ควรระบุ Domain ของ Frontend จริงๆ
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# No need to call initialize_ai_models() here anymore as models are initialized lazily
-@app.on_event("startup")
-async def startup_event():
-    # initialize_ai_models() # <--- REMOVED THIS CALL
-    print("✅ Application startup complete: AI models will be initialized on first access.")
-
-# Include API routers to organize endpoints
-app.include_router(auth.router)       # Authentication endpoints (register, login)
-app.include_router(tenant.router)     # Tenant data management endpoints (get, update)
-app.include_router(webhook.router)    # Webhook endpoints for LINE and Facebook
-app.include_router(assistant.router)  # AI assistant endpoints (settings assistant, wizard)
+# --- API Routers ---
+# 2. ลงทะเบียน API Router ทั้งหมด
+app.include_router(auth.router)
+app.include_router(tenant.router)
+app.include_router(webhook.router)
+app.include_router(assistant.router)
 app.include_router(inbox.router)
 app.include_router(inbox_api.router)
-app.include_router(user.router) 
+app.include_router(user.router)
 
 
-# --- HTML Serving Endpoints ---
-# These endpoints serve the main HTML pages from the static directory
+# --- Static Files and HTML Page Serving ---
 
-@app.get("/", response_class=FileResponse)
+# 3. Mount โฟลเดอร์ 'static' เพื่อให้เข้าถึงไฟล์ CSS, JS, รูปภาพได้
+# ทุก request ที่ขึ้นต้นด้วย /static จะถูกหาจากในโฟลเดอร์ static
+static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+# 4. สร้าง Route เพื่อเสิร์ฟไฟล์ HTML แต่ละหน้า
+# ทำให้เราสามารถเข้าหน้าเว็บด้วย URL สวยๆ เช่น /login, /dashboard
+
+@app.get("/", response_class=HTMLResponse, tags=["Frontend Pages"])
 async def read_root():
-    """Serves the main index.html page."""
-    return os.path.join(static_dir, "index.html")
+    """ส่งผู้ใช้ไปที่หน้า login เป็นหน้าแรก"""
+    return FileResponse(os.path.join(static_dir, 'login.html'))
 
-@app.get("/setup", response_class=FileResponse)
-async def read_setup():
-    """Serves the wizard_setup_ui.html page."""
-    return os.path.join(static_dir, "wizard_setup_ui.html")
-
-@app.get("/dashboard", response_class=FileResponse)
-async def read_dashboard():
-    """Serves the dashboard.html page."""
-    return os.path.join(static_dir, "dashboard.html")
-
-@app.get("/inbox", response_class=FileResponse)
-async def serve_inbox_page(): 
-    """This route serves the main inbox HTML file."""
-    return os.path.join(static_dir, "inbox.html")
-
-@app.get("/settings", response_class=FileResponse)
-async def read_settings():
-    """Serves the settings.html page."""
-    return os.path.join(static_dir, "settings.html")
-
-@app.get("/line-setup-guide", response_class=FileResponse)
-async def read_line_guide():
-    """Serves the line-setup-guide.html page."""
-    return os.path.join(static_dir, "line-setup-guide.html")
-
-@app.get("/facebook-setup-guide", response_class=FileResponse)
-async def read_facebook_guide():
-    """Serves the facebook-setup-guide.html page."""
-    return os.path.join(static_dir, "facebook-setup-guide.html")
-
-@app.get("/website-setup-guide", response_class=FileResponse)
-async def read_website_guide():
-    """Serves the website-setup-guide.html page."""
-    return os.path.join(static_dir, "website-setup-guide.html")    
-
-@app.get("/login", response_class=FileResponse)
+@app.get("/login", response_class=HTMLResponse, tags=["Frontend Pages"])
 async def read_login():
-    """Serves the login.html page."""
-    return os.path.join(static_dir, "login.html")
+    return FileResponse(os.path.join(static_dir, 'login.html'))
 
-# Note: The uvicorn command for running this app will now be:
-# uvicorn app.main:app --host 0.0.0.0 --port $PORT
+@app.get("/dashboard", response_class=HTMLResponse, tags=["Frontend Pages"])
+async def read_dashboard():
+    return FileResponse(os.path.join(static_dir, 'dashboard.html'))
+
+@app.get("/tenant-selector", response_class=HTMLResponse, tags=["Frontend Pages"])
+async def read_tenant_selector():
+    return FileResponse(os.path.join(static_dir, 'tenant-selector.html'))
+
+# --- เพิ่ม Route สำหรับหน้าอื่นๆ ที่คุณมี ---
+
+@app.get("/wizard_setup_ui.html", response_class=HTMLResponse, tags=["Frontend Pages"])
+async def read_wizard():
+    return FileResponse(os.path.join(static_dir, 'wizard_setup_ui.html'))
+
+@app.get("/settings", response_class=HTMLResponse, tags=["Frontend Pages"])
+async def read_settings():
+    return FileResponse(os.path.join(static_dir, 'settings.html'))
+
+@app.get("/inbox", response_class=HTMLResponse, tags=["Frontend Pages"])
+async def read_inbox():
+    return FileResponse(os.path.join(static_dir, 'inbox.html'))
+
+@app.get("/line-setup-guide", response_class=HTMLResponse, tags=["Frontend Pages"])
+async def read_line_guide():
+    return FileResponse(os.path.join(static_dir, 'line-setup-guide.html'))
+
+@app.get("/facebook-setup-guide", response_class=HTMLResponse, tags=["Frontend Pages"])
+async def read_facebook_guide():
+    return FileResponse(os.path.join(static_dir, 'facebook-setup-guide.html'))
+
+@app.get("/website-setup-guide", response_class=HTMLResponse, tags=["Frontend Pages"])
+async def read_website_guide():
+    return FileResponse(os.path.join(static_dir, 'website-setup-guide.html'))
+

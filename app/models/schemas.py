@@ -1,79 +1,46 @@
-# app/routers/tenant.py
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from ..services.firebase_utils import db
-# from ..routers.auth import get_current_user
+# app/models/schemas.py
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any
 
-router = APIRouter(
-    prefix="/api/tenant",
-    tags=["Tenant"],
-    # dependencies=[Depends(get_current_user)]
-)
+# Schema for authentication requests (login and register)
+class AuthRequest(BaseModel):
+    email: str
+    password: str
+    businessType: Optional[str] = None  # Only for registration
 
-class TenantSettings(BaseModel):
-    tenantName: str
-    businessType: str
-    # Add other fields from your settings form as needed
-    botPersona: str = ""
-    knowledgeBase: str = ""
-    lineAccessToken: str = ""
-    facebookPageToken: str = ""
-    facebookVerifyToken: str = ""
-    # ... any other settings fields
+# Schema for updating tenant data
+class TenantUpdateRequest(BaseModel):
+    botPersona: Optional[str] = None
+    knowledgeBase: Optional[str] = None
+    lineAccessToken: Optional[str] = None
+    facebookPageToken: Optional[str] = None
+    facebookVerifyToken: Optional[str] = None
+    businessType: Optional[str] = None
+    productRecommendationEnabled: Optional[bool] = None
+    bookingSystemIntegration: Optional[str] = None
+    botBookingEnabled: Optional[bool] = None
+    projectStatusUpdateEnabled: Optional[bool] = None
+    chatbotName: Optional[str] = None
+    welcomeMessage: Optional[str] = None
+    owner_uid: Optional[str] = None
 
-# # --- ✨ REVISED create_tenant function ---
-# @router.post("/")
-# async def create_tenant(settings: TenantSettings, current_user: dict = Depends(get_current_user)):
-#     """
-#     Creates a new tenant (shop), sets the creator as the owner,
-#     and updates the user's profile with the new tenant info.
-#     """
-#     try:
-#         uid = current_user["uid"]
-        
-#         # 1. Create the new tenant document
-#         new_tenant_ref = db.collection('tenants').document()
-#         tenant_id = new_tenant_ref.id
-        
-#         tenant_data = settings.dict()
-#         tenant_data["owner_uid"] = uid
-#         tenant_data["members"] = {
-#             uid: "owner" # The creator is the owner
-#         }
-        
-#         new_tenant_ref.set(tenant_data)
+    # --- ✨ NEW: Add the missing behavioral toggle fields ---
+    is_detailed_response: Optional[bool] = None
+    is_sweet_tone: Optional[bool] = None
+    show_empathy: Optional[bool] = None
+    high_sales_drive: Optional[bool] = None
 
-#         # 2. Update the user's document to add this new tenant
-#         user_ref = db.collection('users').document(uid)
-#         user_ref.update({
-#             f'tenants.{tenant_id}': 'owner'
-#         })
+# Schema for assistant requests (settings assistant, wizard)
+class AssistantRequest(BaseModel):
+    message: str
 
-#         return {"tenant_id": tenant_id, "message": "Tenant created successfully"}
-#     except Exception as e:
-#         print(f"❌ Error creating tenant: {e}")
-#         raise HTTPException(status_code=500, detail="Failed to create tenant.")
+# Schema for chat widget requests
+class ChatWidgetRequest(BaseModel):
+    user_id: str
+    message: str
 
-# --- The rest of the file needs authorization checks, which we will add later ---
-# For now, get_tenant and update_tenant remain the same but will need updating.
-
-@router.get("/{tenant_id}")
-async def get_tenant(tenant_id: str, current_user: dict = Depends(get_current_user)):
-    # WARNING: This needs a proper authorization check later
-    try:
-        tenant_doc = db.collection('tenants').document(tenant_id).get()
-        if not tenant_doc.exists:
-            raise HTTPException(status_code=404, detail="Tenant not found")
-        return tenant_doc.to_dict()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.put("/{tenant_id}")
-async def update_tenant(tenant_id: str, settings: TenantSettings, current_user: dict = Depends(get_current_user)):
-    # WARNING: This needs a proper authorization check later
-    try:
-        tenant_ref = db.collection('tenants').document(tenant_id)
-        tenant_ref.update(settings.dict(exclude_unset=True))
-        return {"message": "Tenant updated successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+class SocialLoginRequest(BaseModel):
+    uid: str
+    email: str
+    displayName: Optional[str] = None
+    providerId: str

@@ -193,25 +193,43 @@
             document.getElementById('link-to-facebook-guide').href = `/facebook-setup-guide?tenant_id=${TENANT_ID}`;
             document.getElementById('link-to-widget-guide').href = `/website-setup-guide?tenant_id=${TENANT_ID}`;
             
-            async function fetchTenantData(tenantId, uid) {
+            async function fetchTenantData(tenantId) {
                 try {
-                    const response = await fetch(`/api/tenant/${tenantId}`);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    
-                    const data = await response.json();
-                    if (data.owner_uid !== uid) {
-                        console.error("Access Denied: User is not the owner.");
-                        // Handle UI for access denied
-                        document.body.innerHTML = `<div class="w-full h-screen flex items-center justify-center text-center"><div><h1 class="text-3xl font-bold text-red-500">Access Denied</h1><p class="text-gray-600">คุณไม่มีสิทธิ์เข้าถึงข้อมูลส่วนนี้</p><a href="/login" class="text-blue-500 hover:underline mt-4 inline-block">กลับไปหน้าล็อกอิน</a></div></div>`;
-                        return;
+                    const user = auth.currentUser;
+                    if (!user) throw new Error("User not authenticated");
+
+                    // 1. ขอ ID Token จาก Firebase
+                    const idToken = await user.getIdToken(true);
+
+                    // 2. เรียก API โดยแนบ Token ไปใน Header
+                    const response = await fetch(`/api/tenant/${tenantId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${idToken}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    // 3. จัดการกับ Response
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({ detail: "Unknown server error." }));
+                        // Backend จะให้ 403 ถ้าไม่มีสิทธิ์, เราดักจับที่นี่
+                        if (response.status === 403) {
+                            document.body.innerHTML = `<div class="w-full h-screen flex items-center justify-center text-center"><div><h1 class="text-3xl font-bold text-red-500">Access Denied</h1><p class="text-gray-600">คุณไม่มีสิทธิ์เข้าถึงข้อมูลส่วนนี้</p><a href="/login.html" class="text-blue-500 hover:underline mt-4 inline-block">กลับไปหน้าล็อกอิน</a></div></div>`;
+                        }
+                        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
                     }
 
+                    const data = await response.json();
+
+                    // 4. นำข้อมูลไปแสดงผล (โค้ดส่วนนี้เหมือนเดิม)
                     document.getElementById('tenant-name').textContent = data.tenantName || 'ลูกค้า';
                     const businessType = data.businessType;
-                    
+
                     const displayBusinessTypeEl = document.getElementById('display-business-type');
                     const businessTypeDescriptionEl = document.getElementById('business-type-description');
                     const setupBusinessTypeBtnEl = document.getElementById('setup-business-type-btn');
+                    const settingsUrl = `/settings?tenant_id=${tenantId}`; // สร้าง url ที่นี่
 
                     if (businessType) {
                         displayBusinessTypeEl.textContent = getBusinessTypeName(businessType);
@@ -226,9 +244,11 @@
                         setupBusinessTypeBtnEl.onclick = () => window.location.href = settingsUrl;
                         renderDynamicDashboard('default', settingsUrl);
                     }
+
                 } catch (err) {
                     console.error("Could not fetch tenant data:", err);
-                    // Handle UI for fetch error
+                    document.getElementById('display-business-type').textContent = 'โหลดข้อมูลล้มเหลว';
+                    document.getElementById('dynamic-dashboard-content').innerHTML = '<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert"><strong class="font-bold">เกิดข้อผิดพลาด!</strong><span class="block sm:inline"> ไม่สามารถโหลดข้อมูล Dashboard ได้ กรุณาลองอีกครั้ง</span></div>';
                 }
             }
 
